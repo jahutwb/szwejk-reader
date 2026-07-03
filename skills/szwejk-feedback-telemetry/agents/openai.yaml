@@ -1,0 +1,3 @@
+interface:
+  display_name: "Szwejk Feedback Telemetry"
+  short_description: "Plan word clicks, correction events, override submissions, and Site Data safety."

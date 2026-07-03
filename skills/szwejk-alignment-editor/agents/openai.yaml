@@ -1,0 +1,3 @@
+interface:
+  display_name: "Szwejk Alignment Editor"
+  short_description: "Guide clickable tokens, alignment candidates, and override patches."

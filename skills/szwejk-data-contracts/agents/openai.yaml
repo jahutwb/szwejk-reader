@@ -1,0 +1,3 @@
+interface:
+  display_name: "Szwejk Data Contracts"
+  short_description: "Work with Szwejk JSON artifacts, schemas, validators, and fixtures."

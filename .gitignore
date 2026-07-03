@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+.herenow/credentials
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+.local-tmp/
+.herenow/state.json
