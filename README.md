@@ -6,7 +6,7 @@ Webowa aplikacja czytelnicza dla hybrydowego wydania PL -> CS "Dobrego wojaka Sz
 
 Aktualny etap: MVP-0. Istnieje działająca aplikacja Vite + React + TypeScript z fixture'em prawdziwego Tomu I, biblioteczką, publicznym widokiem czytnika, klikaniem słów, lokalną telemetryką i ukrytym trybem debug/admin.
 
-To nadal nie jest finalny czytnik książkowy. Obecna paginacja jest prosta i przybliżona, tylko po to, żeby wymusić kierunek UX: jedna strona/obszar czytania na ekranie, bez scrollowania tekstu głównego. Przypisy na dole strony, pełny edytor alignmentu, konta użytkowników i płatności są poza zakresem MVP-0.
+To nadal nie jest finalny czytnik książkowy. Obecna paginacja jest prosta i przybliżona, tylko po to, żeby wymusić kierunek UX: jedna strona/obszar czytania na ekranie, bez scrollowania tekstu głównego. Pełny edytor alignmentu, konta użytkowników i płatności są poza zakresem MVP-0.
 
 ## Uruchomienie
 
@@ -30,12 +30,13 @@ MVP-0 ładuje cały Tom I jako wygenerowany fixture, ale nie kopiuje pełnych 10
 
 - `public/data/fixtures/szwejk-mini/reader-fixture.json` - renderowalny fixture Tomu I wygenerowany skryptem `scripts/extract-fixture.py`.
 
-Źródła fixture'a:
+Źródła fixture'a to aktualny wskazany wariant v13:
 
-- alignment checkpoints: `~/PycharmProjects/hybrydyzer/data/artifacts/experiments/coverage_tiles_selfslot_v0_fullbook/work/segment_checkpoints/chapter_001.json` ... `chapter_017.json`,
-- plan hybrydyzacji: `~/PycharmProjects/hybrydyzer/data/artifacts/experiments/coverage_tiles_selfslot_v0_fullbook_hybridization/hybridization/hybridization_plan.coverage_tiles_selfslot_v0_fullbook.json`.
+- alignment z pełną hierarchią: `~/PycharmProjects/hybrydyzer/data/artifacts/experiments/fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_segment_rebuild_v1/alignment/szwejk_discourse_alignment.fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_segment_rebuild_v1.syntax_forest_coverage_tiles_selfslot.json`,
+- plan hybrydyzacji: `~/PycharmProjects/hybrydyzer/data/artifacts/experiments/fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_hybridization_v13_risky_editorial_v1/hybridization/hybridization_plan.fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_hybridization_v13_risky_editorial_v1.json`,
+- notes/glossary: `~/PycharmProjects/hybrydyzer/data/artifacts/experiments/fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_hybridization_v13_risky_editorial_v1_render_notesfix_glossary_v1/notes/notes_glossary_plan.fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_hybridization_v13_risky_editorial_v1_render_notesfix_glossary_v1.json`.
 
-Aktualny fixture ma 17 rozdziałów, 1713 akapitów, 8575 kandydatów alignmentowych i 71748 tokenów. Pełne alignmenty 200-300 MB i pełny plan około 200 MB nie są kopiowane do aplikacji.
+Aktualny fixture ma 17 rozdziałów, 2019 akapitów, 16371 kandydatów alignmentowych, 71272 tokeny, 1540 tokenów z intro annotations i 303 przypisy. Pełny alignment około 290 MB i pełny plan około 192 MB nie są kopiowane do aplikacji.
 
 ## Kształt danych
 
@@ -45,9 +46,10 @@ Fixture ma strukturę:
 - każdy `Paragraph` ma renderowany segment `hybrid`,
 - segment `hybrid` zawiera wymieszane tokeny PL/CS wygenerowane z `selected_candidates`,
 - każdy `RenderSegment` ma stabilne `Token[]` i offsety w `segment.text`,
-- `Candidate[]` opisuje zakresy alignmentowe przez listy `tokenIds` oraz `parentId`,
-- tokeny czeskich podstawień przechowują łańcuch `candidateIds` od najmniejszego kandydata do jego rodziców,
-- `Footnote[]` i `GlossaryEntry[]` istnieją w kontrakcie, ale w MVP-0 są puste.
+- `Candidate[]` opisuje zakresy alignmentowe z pełnego drzewa alignmentu przez `parentId`, `rootId`, absolutne spany source/target i listy `tokenIds`,
+- tokeny PL i CS przechowują `candidateIds` dobrane z pełnej hierarchii alignmentu, nie tylko z listy `selected_candidates`,
+- tokeny pierwszych wprowadzeń mają `introIds` i `introRanges` z `plan.intro_annotations`,
+- tokeny z przypisami mają `footnoteIds`, a `Chapter.footnotes` pochodzi z notes/glossary planu.
 
 Typy są w `src/domain/types.ts`, a walidatory runtime w `src/domain/schemas.ts`.
 
@@ -62,16 +64,17 @@ Aplikacja zawiera:
 - ekran czytania Tomu I z prawdziwego planu hybrydyzacji,
 - książkową ramę strony o wysokości ekranu,
 - prostą nawigację poprzednia/następna strona,
-- kontrolkę wielkości fontu,
+- prostą paginację, która może rozdzielać długie akapity między strony,
+- przypisy na dole aktualnej strony, jeśli widoczne intro ma powiązany przypis,
 - zapis ostatniego klikniętego tokena jako pozycji czytania w `localStorage`.
 
 W normalnym trybie publicznym tekst czeski nie jest stale renderowany pod polskim akapitem. Czytelnik widzi tekst hybrydowy w stronie książkowej, a równoległy fragment pojawia się dopiero po kliknięciu słowa. Popover znika po kliknięciu poza nim.
 
-Skład jest zbliżany do renderu LaTeX z `hybrydyzer`: polski tekst używa `TeX Gyre Pagella`, czeskie podstawienia `TeX Gyre Heros`, akapity nie mają dodatkowego odstępu pionowego, a pierwszy wiersz ma książkowe wcięcie.
+Skład jest zbliżany do renderu LaTeX z `hybrydyzer`: polski tekst używa `TeX Gyre Pagella`, czeskie podstawienia `TeX Gyre Heros`, akapity nie mają dodatkowego odstępu pionowego, a pierwszy wiersz ma książkowe wcięcie. Regulacja wielkości fontu została usunięta z publicznego UI.
 
 Interpunkcja jest odtwarzana z `segment.text` i offsetów tokenów. Renderer nie dokleja sztucznych spacji po tokenach.
 
-Podział na strony jest na razie przybliżony i zależy od wielkości fontu. Zmiana fontu może przesunąć akapit na inną stronę, ale nie jest to jeszcze docelowa paginacja typograficzna.
+Podział na strony jest na razie przybliżony i tekstowy. Nie jest to jeszcze docelowa paginacja typograficzna ani zgodność 1:1 z PDF-em LaTeX.
 
 ## Kliknięcie tokena
 
@@ -86,6 +89,8 @@ Każdy renderowany token ma stabilne atrybuty DOM:
 - `data-candidate-ids`.
 
 Kliknięcie tokena w trybie publicznym pokazuje mały popover przy zaznaczonym słowie z równoległym fragmentem w drugim języku. Popover nie pokazuje technicznych etykiet typu `Czeski odpowiednik`. Jeżeli token ma hierarchię kandydatów, popover pokazuje małe kontrolki `-` / `+` do zmiany zakresu.
+
+Pierwsze wprowadzenia nowych czeskich lematów są pogrubione punktowo na podstawie `intro_annotations`, nie przez regex ani przez pogrubienie całego podstawienia.
 
 Panel `Token debug`, `candidate_ids`, aktywny kandydat i eksport override'ów są dostępne wyłącznie w trybie debug:
 
@@ -134,7 +139,6 @@ npm run build
 ## Czego jeszcze nie ma
 
 - finalnej paginacji strona-po-stronie,
-- przypisów rezerwujących miejsce na dole strony,
 - swipe na mobile,
 - publicznego formularza "Zgłoś poprawkę",
 - pełnego edytora alignmentu,

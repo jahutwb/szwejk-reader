@@ -3,8 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import fixture from '../public/data/fixtures/szwejk-mini/reader-fixture.json'
+import type { ReaderFixture, Token } from './domain/types'
 
-const response = new Response(JSON.stringify(fixture), { status: 200, headers: { 'content-type': 'application/json' } })
+const readerFixture = fixture as unknown as ReaderFixture
+const response = new Response(JSON.stringify(readerFixture), { status: 200, headers: { 'content-type': 'application/json' } })
 
 async function findVisibleTargetToken(user: ReturnType<typeof userEvent.setup>, maxPages = 20): Promise<HTMLElement> {
   for (let page = 0; page < maxPages; page += 1) {
@@ -17,6 +19,19 @@ async function findVisibleTargetToken(user: ReturnType<typeof userEvent.setup>, 
   }
 
   throw new Error('No visible Czech token found in the checked pages')
+}
+
+async function findVisibleLemmaIntro(user: ReturnType<typeof userEvent.setup>, maxPages = 30): Promise<HTMLElement> {
+  for (let page = 0; page < maxPages; page += 1) {
+    const intro = document.querySelector('.lemma-intro')
+    if (intro instanceof HTMLElement) return intro
+
+    const nextButton = screen.getByRole('button', { name: /następna strona/i }) as HTMLButtonElement
+    if (nextButton.disabled) break
+    await user.click(nextButton)
+  }
+
+  throw new Error('No visible lemma intro found in the checked pages')
 }
 
 describe('App', () => {
@@ -42,12 +57,13 @@ describe('App', () => {
     expect(screen.getAllByTestId('reader-token').length).toBeGreaterThan(0)
   })
 
-  it('loads the whole first volume from real alignment and hybridization artifacts', () => {
-    const volume = fixture.work.volumes[0]
+  it('loads the whole first volume from v13 plan and full hierarchical alignment artifacts', () => {
+    const volume = readerFixture.work.volumes[0]
     const chapterIds = volume.chapters.map((chapter) => chapter.id)
     const paragraphCount = volume.chapters.reduce((total, chapter) => total + chapter.paragraphs.length, 0)
     const candidateCount = volume.chapters.reduce((total, chapter) => total + chapter.candidates.length, 0)
 
+    expect(readerFixture.metadata.fixtureKind).toBe('szwejk-volume-1-v13-reader-derived')
     expect(chapterIds).toEqual([
       'chapter-001',
       'chapter-002',
@@ -68,15 +84,21 @@ describe('App', () => {
       'chapter-017',
     ])
     expect(paragraphCount).toBeGreaterThan(800)
-    expect(candidateCount).toBeGreaterThan(3000)
+    expect(candidateCount).toBeGreaterThan(12_000)
   })
 
-  it('contains hierarchical candidate memberships for substituted tokens', () => {
-    const tokens = fixture.work.volumes[0].chapters.flatMap((chapter) =>
+  it('contains intro annotations, footnotes, and hierarchical candidate memberships from source artifacts', () => {
+    const chapters = readerFixture.work.volumes[0].chapters
+    const tokens: Token[] = readerFixture.work.volumes[0].chapters.flatMap((chapter) =>
       chapter.paragraphs.flatMap((paragraph) => paragraph.segments.flatMap((segment) => segment.tokens)),
     )
+    const footnotes = chapters.flatMap((chapter) => chapter.footnotes)
 
     expect(tokens.some((token) => token.language === 'cs' && token.candidateIds.length > 1)).toBe(true)
+    expect(tokens.some((token) => token.language === 'cs' && token.introIds?.length)).toBe(true)
+    expect(tokens.some((token) => token.language === 'cs' && token.footnoteIds?.length)).toBe(true)
+    expect(footnotes.length).toBeGreaterThan(100)
+    expect(footnotes.some((footnote) => footnote.text.includes('—'))).toBe(true)
   })
 
   it('keeps debug and admin controls hidden in the public reader', async () => {
@@ -87,6 +109,8 @@ describe('App', () => {
     expect(await screen.findByTestId('reader-screen')).toBeInTheDocument()
     expect(screen.queryByText('Token debug')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /pobierz moje poprawki json/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /zwiększ font/i })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/wielkość fontu/i)).not.toBeInTheDocument()
     expect(container.querySelector('.debug-panel')).not.toBeInTheDocument()
   })
 
@@ -141,6 +165,14 @@ describe('App', () => {
     const targetToken = await findVisibleTargetToken(user)
 
     expect(targetToken).toHaveClass('reader-token-target')
+  })
+
+  it('bolds first target lemma introductions from intro annotations', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+
+    expect(await findVisibleLemmaIntro(user)).toHaveClass('lemma-intro')
   })
 
   it('shows compact candidate hierarchy controls for substituted tokens', async () => {

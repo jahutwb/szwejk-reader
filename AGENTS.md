@@ -13,6 +13,8 @@
 - Use the PL source axis as the canonical coordinate system for locations, spans, and progress.
 - Do not mutate original hybridization plans; write user corrections as overrides.
 - Validate data contracts at runtime before rendering or editing.
+- Use the current v13 reader sources unless Jan explicitly changes the target: v13 hybridization plan, full hierarchical alignment artifact, and notes/glossary plan.
+- Use `plan.intro_annotations` as the only source of truth for first-lemma intro highlighting.
 
 ## Reader Rules
 
@@ -30,4 +32,4 @@
 
 ## Current Phase
 
-The current phase is MVP-0: a Vite/React public reader shell with a real volume-1 fullbook-derived hybridization fixture, runtime validation, a book-like single-page reader view, simple page navigation, compact token counterpart popovers, local telemetry, and debug/admin tools hidden behind `?debug=1`. Render prose from `segment.text` plus token offsets; do not add synthetic spaces after tokens. Do not implement final typographic pagination, payments, accounts, public correction workflows, or the full alignment editor until Jan explicitly asks for them.
+The current phase is MVP-0: a Vite/React public reader shell with a real volume-1 v13-derived fixture, full alignment-tree candidate metadata, intro annotations, notes/footnotes, runtime validation, a book-like single-page reader view, simple page navigation, compact token counterpart popovers, local telemetry, and debug/admin tools hidden behind `?debug=1`. Render prose from `segment.text` plus token offsets; do not add synthetic spaces after tokens. Do not implement final typographic pagination, payments, accounts, public correction workflows, or the full alignment editor until Jan explicitly asks for them.

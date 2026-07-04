@@ -62,6 +62,20 @@ export interface Token {
   start: number
   end: number
   candidateIds: string[]
+  introIds?: string[]
+  footnoteIds?: string[]
+  introRanges?: TokenIntroRange[]
+  sourceStart?: number
+  sourceEnd?: number
+  targetStart?: number
+  targetEnd?: number
+}
+
+export interface TokenIntroRange {
+  introId: string
+  start: number
+  end: number
+  footnoteId?: string | null
 }
 
 export interface Candidate {
@@ -75,13 +89,31 @@ export interface Candidate {
   sourceText?: string
   targetText?: string
   score?: number | null
+  scoreComponents?: Record<string, number>
   parentId?: string | null
+  rootId?: string
+  sourceStart?: number
+  sourceEnd?: number
+  targetStart?: number
+  targetEnd?: number
+  depth?: number
+  selected?: boolean
+  selectionMode?: string | null
+  applicationOrder?: number | null
 }
 
 export interface Footnote {
   id: string
   marker?: string
   paragraphId?: string
+  introId?: string
+  candidateId?: string
+  sourceUnitId?: string
+  targetLemma?: string
+  noteType?: string
+  targetFragment?: string
+  sourceLiteralFragment?: string
+  sourceTranslationFragment?: string | null
   text: string
 }
 
@@ -90,6 +122,9 @@ export interface GlossaryEntry {
   term: string
   explanation: string
   language?: LanguageCode
+  firstIntroId?: string
+  firstNoteId?: string | null
+  surfaceForms?: string[]
 }
 
 export interface ReaderOverride {

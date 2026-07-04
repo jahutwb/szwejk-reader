@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { loadMiniFixture } from '@/data/fixture'
 import { findSmallestCandidateForToken } from '@/domain/selection'
 import { splitTokenTextParts } from '@/domain/textSegments'
-import type { Candidate, Chapter, Paragraph, ReaderFixture, ReaderOverride, Token, Volume } from '@/domain/types'
+import type { Candidate, Chapter, Footnote, Paragraph, ReaderFixture, ReaderOverride, RenderSegment, Token, Volume } from '@/domain/types'
 import { logCorrectionEvent, logWordClick, submitOverrides } from '@/telemetry/telemetry'
 import { cn } from '@/lib/utils'
 
@@ -28,7 +28,14 @@ type ReaderPage = {
   id: string
   chapterId: string
   chapterTitle: string
-  paragraphs: Paragraph[]
+  blocks: ReaderPageBlock[]
+  footnotes: Footnote[]
+}
+
+type ReaderPageBlock = {
+  id: string
+  paragraph: Paragraph
+  continuation: boolean
 }
 
 type ReaderProgress = {
@@ -42,9 +49,10 @@ type ReaderProgress = {
 }
 
 const FIXTURE_VOLUME_ID = 'volume-1'
-const FONT_KEY = 'szwejk-reader.font-size'
 const PROGRESS_KEY = 'szwejk-reader.progress'
 const OVERRIDES_KEY = 'szwejk-reader.overrides'
+const PAGE_CHAR_CAPACITY = 2450
+const MIN_TRAILING_PAGE_CHARS = 360
 
 const defaultVolumes: Volume[] = [
   { id: 'volume-1', label: 'Tom I', status: 'available', chapters: [] },
@@ -52,13 +60,6 @@ const defaultVolumes: Volume[] = [
   { id: 'volume-3', label: 'Tom III', status: 'soon', chapters: [] },
   { id: 'volume-4', label: 'Tom IV', status: 'soon', chapters: [] },
 ]
-
-function readNumber(key: string, fallback: number): number {
-  const raw = localStorage.getItem(key)
-  if (!raw) return fallback
-  const parsed = Number(raw)
-  return Number.isFinite(parsed) ? parsed : fallback
-}
 
 function readOverrides(): ReaderOverride[] {
   try {
@@ -98,39 +99,110 @@ function estimateParagraphLength(paragraph: Paragraph): number {
   return readerSegment?.text.length ?? 0
 }
 
-function getApproxPageCapacity(fontSize: number): number {
-  return Math.max(760, Math.round(1900 - fontSize * 44))
+function findSliceEnd(segment: RenderSegment, start: number, capacity: number): number {
+  const textLength = segment.text.length
+  if (start + capacity >= textLength) return textLength
+  const target = start + capacity
+  const candidates = segment.tokens.filter((token) => token.end <= target && token.end > start + MIN_TRAILING_PAGE_CHARS)
+  if (candidates.length > 0) return candidates[candidates.length - 1].end
+  const fallback = segment.tokens.find((token) => token.end > start)
+  return fallback?.end ?? textLength
 }
 
-function buildReaderPages(chapters: Chapter[], fontSize: number): ReaderPage[] {
-  const capacity = getApproxPageCapacity(fontSize)
+function sliceParagraph(paragraph: Paragraph, start: number, end: number): Paragraph {
+  const segment = getReaderSegment(paragraph)
+  if (!segment) return paragraph
+  const text = segment.text.slice(start, end)
+  const tokens = segment.tokens
+    .filter((token) => token.start >= start && token.end <= end)
+    .map((token) => ({
+      ...token,
+      start: token.start - start,
+      end: token.end - start,
+    }))
+  const candidateIds = Array.from(new Set(tokens.flatMap((token) => token.candidateIds)))
+  return {
+    ...paragraph,
+    segments: [
+      {
+        ...segment,
+        id: `${segment.id}::slice:${start}:${end}`,
+        text,
+        tokens,
+        candidateIds,
+      },
+    ],
+  }
+}
+
+function collectPageFootnotes(chapter: Chapter, blocks: ReaderPageBlock[]): Footnote[] {
+  const byId = new Map(chapter.footnotes.map((footnote) => [footnote.id, footnote]))
+  const seen = new Set<string>()
+  const footnotes: Footnote[] = []
+  for (const block of blocks) {
+    const segment = getReaderSegment(block.paragraph)
+    for (const token of segment?.tokens ?? []) {
+      for (const footnoteId of token.footnoteIds ?? []) {
+        if (seen.has(footnoteId)) continue
+        const footnote = byId.get(footnoteId)
+        if (!footnote) continue
+        seen.add(footnoteId)
+        footnotes.push(footnote)
+      }
+    }
+  }
+  return footnotes
+}
+
+function buildReaderPages(chapters: Chapter[]): ReaderPage[] {
   const pages: ReaderPage[] = []
   for (const chapter of chapters) {
-    let current: Paragraph[] = []
+    let current: ReaderPageBlock[] = []
     let currentLength = 0
+    let pageIndexInChapter = 1
 
     const pushPage = () => {
       if (current.length === 0) return
       pages.push({
-        id: `${chapter.id}-page-${pages.filter((page) => page.chapterId === chapter.id).length + 1}`,
+        id: `${chapter.id}-page-${pageIndexInChapter}`,
         chapterId: chapter.id,
         chapterTitle: chapter.title,
-        paragraphs: current,
+        blocks: current,
+        footnotes: collectPageFootnotes(chapter, current),
       })
       current = []
       currentLength = 0
+      pageIndexInChapter += 1
     }
 
     for (const paragraph of chapter.paragraphs) {
-      const paragraphLength = estimateParagraphLength(paragraph)
-      const nextLength = currentLength + paragraphLength
-
-      if (current.length > 0 && nextLength > capacity) {
-        pushPage()
+      const segment = getReaderSegment(paragraph)
+      if (!segment) continue
+      let start = 0
+      let sliceIndex = 0
+      while (start < segment.text.length) {
+        if (current.length > 0 && PAGE_CHAR_CAPACITY - currentLength < MIN_TRAILING_PAGE_CHARS) {
+          pushPage()
+        }
+        const remaining = PAGE_CHAR_CAPACITY - currentLength
+        const end = findSliceEnd(segment, start, Math.max(remaining, MIN_TRAILING_PAGE_CHARS))
+        const sliced = sliceParagraph(paragraph, start, end)
+        const slicedLength = estimateParagraphLength(sliced)
+        current.push({
+          id: `${paragraph.id}:page-slice:${sliceIndex}:${start}:${end}`,
+          paragraph: sliced,
+          continuation: start > 0,
+        })
+        currentLength += slicedLength
+        start = end
+        sliceIndex += 1
+        while (start < segment.text.length && /\s/.test(segment.text[start])) {
+          start += 1
+        }
+        if (start < segment.text.length && currentLength >= PAGE_CHAR_CAPACITY) {
+          pushPage()
+        }
       }
-
-      current.push(paragraph)
-      currentLength += paragraphLength
     }
 
     pushPage()
@@ -142,6 +214,12 @@ function buildReaderPages(chapters: Chapter[], fontSize: number): ReaderPage[] {
 function getCandidateOptionsForToken(candidates: Candidate[], token: Token): Candidate[] {
   const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]))
   const options = token.candidateIds.map((candidateId) => byId.get(candidateId)).filter((candidate): candidate is Candidate => Boolean(candidate))
+  options.sort((left, right) => {
+    const leftSpan = (left.sourceEnd ?? left.tokenIds.length) - (left.sourceStart ?? 0)
+    const rightSpan = (right.sourceEnd ?? right.tokenIds.length) - (right.sourceStart ?? 0)
+    if (leftSpan !== rightSpan) return leftSpan - rightSpan
+    return (right.depth ?? 0) - (left.depth ?? 0)
+  })
   if (options.length > 0) return options
   const fallback = findSmallestCandidateForToken(candidates, token.id)
   return fallback ? [fallback] : []
@@ -166,7 +244,6 @@ function App() {
   const [view, setView] = useState<View>('library')
   const [fixture, setFixture] = useState<ReaderFixture | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [fontSize, setFontSize] = useState(() => readNumber(FONT_KEY, 18))
   const [selection, setSelection] = useState<TokenSelection | null>(null)
   const [overrides, setOverrides] = useState<ReaderOverride[]>(() => readOverrides())
   const [currentLocation, setCurrentLocation] = useState<ReaderProgress | null>(() => readProgress())
@@ -178,12 +255,12 @@ function App() {
   const availableChapters = useMemo(() => getAvailableChapters(fixture), [fixture])
   const firstChapter = availableChapters[0]
   const chapterById = useMemo(() => new Map(availableChapters.map((chapter) => [chapter.id, chapter])), [availableChapters])
-  const pages = useMemo(() => buildReaderPages(availableChapters, fontSize), [availableChapters, fontSize])
+  const pages = useMemo(() => buildReaderPages(availableChapters), [availableChapters])
   const resolvedPageIndex = useMemo(() => {
     if (pages.length === 0) return 0
     const paragraphId = currentLocation?.paragraphId
     if (paragraphId) {
-      const indexFromLocation = pages.findIndex((page) => page.paragraphs.some((paragraph) => paragraph.id === paragraphId))
+      const indexFromLocation = pages.findIndex((page) => page.blocks.some((block) => block.paragraph.id === paragraphId))
       if (indexFromLocation >= 0) return indexFromLocation
     }
     return Math.min(currentPageIndex, pages.length - 1)
@@ -208,11 +285,6 @@ function App() {
     }
   }, [])
 
-  useEffect(() => {
-    document.documentElement.style.setProperty('--reader-font-size', `${fontSize}px`)
-    localStorage.setItem(FONT_KEY, String(fontSize))
-  }, [fontSize])
-
   const writeProgress = useCallback(
     (progress: Omit<ReaderProgress, 'workId' | 'volumeId' | 'updatedAt'>) => {
       const nextProgress: ReaderProgress = {
@@ -232,7 +304,7 @@ function App() {
       if (!pages.length) return
       const boundedIndex = Math.min(Math.max(nextIndex, 0), pages.length - 1)
       const nextPage = pages[boundedIndex]
-      const firstParagraph = nextPage.paragraphs[0]
+      const firstParagraph = nextPage.blocks[0]?.paragraph
       const firstSegment = firstParagraph ? getReaderSegment(firstParagraph) : undefined
       setCurrentPageIndex(boundedIndex)
       setSelection(null)
@@ -362,24 +434,6 @@ function App() {
                 debug
               </span>
             ) : null}
-            <Button variant="outline" size="sm" onClick={() => setFontSize((value) => Math.max(15, value - 1))} aria-label="Zmniejsz font">
-              <Minus className="h-4 w-4" />
-            </Button>
-            <label className="font-control">
-              <span>Font</span>
-              <input
-                type="range"
-                min="15"
-                max="24"
-                value={fontSize}
-                onChange={(event) => setFontSize(Number(event.target.value))}
-                aria-label="Wielkość fontu"
-              />
-              <span className="tabular-nums">{fontSize}px</span>
-            </label>
-            <Button variant="outline" size="sm" onClick={() => setFontSize((value) => Math.min(24, value + 1))} aria-label="Zwiększ font">
-              <Plus className="h-4 w-4" />
-            </Button>
           </div>
         </header>
 
@@ -398,19 +452,25 @@ function App() {
             </div>
 
             <div className="reader-page-content">
-              {currentPage?.paragraphs.map((paragraph) => (
-                <ReaderParagraph
-                  key={paragraph.id}
-                  paragraph={paragraph}
-                  workId={work?.id ?? 'work-szwejk'}
-                  chapterId={currentPage.chapterId}
-                  selection={selection}
-                  onTokenClick={handleTokenClick}
-                />
-              ))}
+              {currentPage
+                ? currentPage.blocks.map((block) => (
+                    <ReaderParagraph
+                      key={block.id}
+                      paragraph={block.paragraph}
+                      workId={work?.id ?? 'work-szwejk'}
+                      chapterId={currentPage.chapterId}
+                      continuation={block.continuation}
+                      footnoteNumberById={new Map(currentPage.footnotes.map((footnote, index) => [footnote.id, index + 1]))}
+                      selection={selection}
+                      onTokenClick={handleTokenClick}
+                    />
+                  ))
+                : null}
             </div>
 
             <ReaderPopover selection={selection} onSelectCandidate={selectCandidate} />
+
+            {currentPage?.footnotes.length ? <PageFootnotes footnotes={currentPage.footnotes} /> : null}
 
             <div className="reader-page-foot">
               <span>{resolvedPageIndex + 1}</span>
@@ -481,12 +541,16 @@ function ReaderParagraph({
   paragraph,
   workId,
   chapterId,
+  continuation,
+  footnoteNumberById,
   selection,
   onTokenClick,
 }: {
   paragraph: Paragraph
   workId: string
   chapterId: string
+  continuation: boolean
+  footnoteNumberById: Map<string, number>
   selection: TokenSelection | null
   onTokenClick: (chapterId: string, paragraph: Paragraph, segmentId: string, token: Token, anchor?: DOMRect) => void
 }) {
@@ -496,7 +560,7 @@ function ReaderParagraph({
 
   return (
     <p
-      className="reader-paragraph"
+      className={cn('reader-paragraph', continuation && 'reader-paragraph-continuation')}
       lang={segment.language}
       data-work-id={workId}
       data-volume-id={FIXTURE_VOLUME_ID}
@@ -537,13 +601,81 @@ function ReaderParagraph({
             data-segment-id={segment.id}
             data-token-id={token.id}
             data-candidate-ids={token.candidateIds.join(' ')}
+            data-intro-ids={(token.introIds ?? []).join(' ')}
+            data-footnote-ids={(token.footnoteIds ?? []).join(' ')}
             lang={token.language === 'cs' ? 'cs' : undefined}
           >
-            {part.text}
+            <TokenText token={token} text={part.text} footnoteNumberById={footnoteNumberById} />
           </span>
         )
       })}
     </p>
+  )
+}
+
+function TokenText({ token, text, footnoteNumberById }: { token: Token; text: string; footnoteNumberById: Map<string, number> }) {
+  const ranges = token.introRanges ?? []
+  const footnoteNumbers = Array.from(new Set((token.footnoteIds ?? []).map((id) => footnoteNumberById.get(id)).filter((value): value is number => Boolean(value))))
+  if (!ranges.length) {
+    return (
+      <>
+        {text}
+        {footnoteNumbers.map((number) => (
+          <sup key={number} className="reader-note-ref">
+            {number}
+          </sup>
+        ))}
+      </>
+    )
+  }
+
+  const parts: Array<{ text: string; intro: boolean; key: string }> = []
+  let cursor = 0
+  for (const [index, range] of ranges.entries()) {
+    const start = Math.max(0, Math.min(text.length, range.start))
+    const end = Math.max(start, Math.min(text.length, range.end))
+    if (cursor < start) {
+      parts.push({ key: `plain-${index}-${cursor}`, text: text.slice(cursor, start), intro: false })
+    }
+    if (start < end) {
+      parts.push({ key: `intro-${index}-${start}`, text: text.slice(start, end), intro: true })
+    }
+    cursor = end
+  }
+  if (cursor < text.length) {
+    parts.push({ key: `plain-tail-${cursor}`, text: text.slice(cursor), intro: false })
+  }
+
+  return (
+    <>
+      {parts.map((part) =>
+        part.intro ? (
+          <span key={part.key} className="lemma-intro">
+            {part.text}
+          </span>
+        ) : (
+          <span key={part.key}>{part.text}</span>
+        ),
+      )}
+      {footnoteNumbers.map((number) => (
+        <sup key={number} className="reader-note-ref">
+          {number}
+        </sup>
+      ))}
+    </>
+  )
+}
+
+function PageFootnotes({ footnotes }: { footnotes: Footnote[] }) {
+  return (
+    <ol className="reader-page-notes">
+      {footnotes.map((footnote, index) => (
+        <li key={footnote.id}>
+          <span>{index + 1}</span>
+          <p>{footnote.text}</p>
+        </li>
+      ))}
+    </ol>
   )
 }
 

@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Extract a reader fixture from real hybrydyzer fullbook artifacts.
-
-The project reader uses compact, structured JSON fixtures. This script reads
-the large hybrydyzer alignment/hybridization artifacts outside this repository
-and writes only the first volume render fixture needed by the MVP reader.
-"""
+"""Extract a reader fixture from the current v13 hybrydyzer artifacts."""
 
 from __future__ import annotations
 
@@ -15,14 +10,25 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-ALIGNMENT_DIR = Path(
+ALIGNMENT_SOURCE = Path(
     '/home/jahu/PycharmProjects/hybrydyzer/data/artifacts/experiments/'
-    'coverage_tiles_selfslot_v0_fullbook/work/segment_checkpoints'
+    'fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_segment_rebuild_v1/'
+    'alignment/'
+    'szwejk_discourse_alignment.fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_segment_rebuild_v1.'
+    'syntax_forest_coverage_tiles_selfslot.json'
 )
 PLAN_SOURCE = Path(
     '/home/jahu/PycharmProjects/hybrydyzer/data/artifacts/experiments/'
-    'coverage_tiles_selfslot_v0_fullbook_hybridization/hybridization/'
-    'hybridization_plan.coverage_tiles_selfslot_v0_fullbook.json'
+    'fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_hybridization_v13_risky_editorial_v1/'
+    'hybridization/'
+    'hybridization_plan.fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_hybridization_v13_risky_editorial_v1.json'
+)
+NOTES_SOURCE = Path(
+    '/home/jahu/PycharmProjects/hybrydyzer/data/artifacts/experiments/'
+    'fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_hybridization_v13_risky_editorial_v1_render_notesfix_glossary_v1/'
+    'notes/'
+    'notes_glossary_plan.fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_hybridization_v13_risky_editorial_v1_'
+    'render_notesfix_glossary_v1.json'
 )
 OUT_DIR = Path('/home/jahu/PycharmProjects/szwejk-reader/public/data/fixtures/szwejk-mini')
 
@@ -52,18 +58,30 @@ PARAGRAPH_ID_RE = re.compile(r'(.+-ch-\d+-p-\d+)')
 CHAPTER_RE = re.compile(r'-ch-(\d{3})')
 NO_SPACE_BEFORE = set(r'.,;:!?)]}»”’…')
 NO_SPACE_AFTER = set(r'([{«“‘')
+DUPLICATE_INLINE_PUNCT_RE = re.compile(r'([,.;:!?])\s+\1(?=\s|$)')
 
 
 @dataclass
-class CandidateRecord:
+class FlatCandidate:
     id: str
     type: str
     source_unit_ids: list[str]
     target_unit_ids: list[str]
     source_text: str
     target_text: str
+    source_start: int
+    source_end: int
+    target_start: int
+    target_end: int
     score: float | None
+    score_components: dict[str, float]
     parent_id: str | None
+    root_id: str
+    unit_id: str
+    depth: int
+    selected: bool = False
+    selection_mode: str | None = None
+    application_order: int | None = None
     token_ids: list[str] = field(default_factory=list)
     source_token_ids: list[str] = field(default_factory=list)
     target_token_ids: list[str] = field(default_factory=list)
@@ -82,6 +100,12 @@ class ParagraphBuilder:
 
 def chapter_id(chapter_number: int) -> str:
     return f'chapter-{chapter_number:03d}'
+
+
+def build_execution_unit_id(source_unit_ids: list[str]) -> str:
+    if len(source_unit_ids) == 1:
+        return source_unit_ids[0]
+    return '__group__' + '__'.join(source_unit_ids)
 
 
 def chapter_number_from_text(value: str | None) -> int | None:
@@ -134,57 +158,242 @@ def boundary_separator(left_text: str, right_text: str, *, sentence_join: bool =
     return ''
 
 
-def span_start_end(candidate: dict[str, Any]) -> tuple[int, int]:
-    span = candidate.get('source_span') or {}
+def normalize_note_display_fragment(text: str | None) -> str:
+    normalized = re.sub(r'\s+', ' ', text or '').strip()
+    if normalized.endswith('.') and not normalized.endswith('...'):
+        normalized = normalized[:-1].rstrip()
+    return normalized
+
+
+def render_footnote_text(note: dict[str, Any]) -> str:
+    target = normalize_note_display_fragment(note.get('target_fragment'))
+    literal = normalize_note_display_fragment(note.get('source_literal_fragment'))
+    meaning = normalize_note_display_fragment(note.get('source_translation_fragment'))
+    if note.get('note_type') == 'idiomatic' and meaning:
+        return f'{target} — dosł. {literal}; sens: {meaning}'
+    return f'{target} — {literal}'
+
+
+def cleanup_duplicate_inline_punctuation(text: str) -> str:
+    previous = None
+    current = text
+    while current != previous:
+        previous = current
+        current = DUPLICATE_INLINE_PUNCT_RE.sub(r'\1', current)
+    return current
+
+
+def span_start_end(candidate: dict[str, Any], key: str = 'source_span') -> tuple[int, int]:
+    span = candidate.get(key) or {}
     start = span.get('char_start', span.get('start_char', 0))
     end = span.get('char_end', span.get('end_char', 0))
     return int(start or 0), int(end or 0)
 
 
-def tokenize_into(text: str, language: str, segment_id: str, candidate_ids: list[str], offset: int) -> list[dict[str, Any]]:
-    tokens: list[dict[str, Any]] = []
-    for index, match in enumerate(TOKEN_RE.finditer(text), start=1):
-        token_language = 'pl' if language == 'hybrid' else language
-        tokens.append(
-            {
-                'id': f'{segment_id}-tok-{offset + match.start():06d}-{index:04d}',
-                'text': match.group(0),
-                'language': token_language,
-                'start': offset + match.start(),
-                'end': offset + match.end(),
-                'candidateIds': list(dict.fromkeys(candidate_ids)),
-            }
+def selected_source_start(candidate: dict[str, Any]) -> int:
+    span = candidate.get('absolute_source_span') or candidate.get('source_span') or {}
+    return int(span.get('start_char', 0) or 0)
+
+
+def selected_source_end(candidate: dict[str, Any]) -> int:
+    span = candidate.get('absolute_source_span') or candidate.get('source_span') or {}
+    return int(span.get('end_char', 0) or 0)
+
+
+def selected_target_start(candidate: dict[str, Any], fallback: int) -> int:
+    span = candidate.get('absolute_target_span') or candidate.get('target_span') or {}
+    return int(span.get('start_char', fallback) or fallback)
+
+
+def flatten_candidate_tree(
+    candidate: dict[str, Any],
+    *,
+    unit_id: str,
+    absolute_source_offset: int,
+    absolute_target_offset: int,
+    root_id: str | None = None,
+    parent_id: str | None = None,
+    depth: int = 0,
+) -> list[FlatCandidate]:
+    source_start, source_end = span_start_end(candidate, 'source_span')
+    target_start, target_end = span_start_end(candidate, 'target_span')
+    absolute_source_start = absolute_source_offset + source_start
+    absolute_source_end = absolute_source_offset + source_end
+    absolute_target_start = absolute_target_offset + target_start
+    absolute_target_end = absolute_target_offset + target_end
+    candidate_id = candidate['candidate_id']
+    resolved_root_id = root_id or candidate_id
+    flat = FlatCandidate(
+        id=candidate_id,
+        type=candidate.get('candidate_type') or 'span',
+        source_unit_ids=candidate.get('source_unit_ids') or [],
+        target_unit_ids=candidate.get('target_unit_ids') or [],
+        source_text=candidate.get('source_surface_text') or '',
+        target_text=candidate.get('target_surface_text') or '',
+        source_start=absolute_source_start,
+        source_end=absolute_source_end,
+        target_start=absolute_target_start,
+        target_end=absolute_target_end,
+        score=candidate.get('alignment_confidence'),
+        score_components=candidate.get('score_components') or {},
+        parent_id=parent_id,
+        root_id=resolved_root_id,
+        unit_id=unit_id,
+        depth=depth,
+    )
+    flattened = [flat]
+    child_artifact = candidate.get('child_alignment_artifact') or {}
+    for child in child_artifact.get('candidates') or []:
+        flattened.extend(
+            flatten_candidate_tree(
+                child,
+                unit_id=unit_id,
+                absolute_source_offset=absolute_source_start,
+                absolute_target_offset=absolute_target_start,
+                root_id=resolved_root_id,
+                parent_id=candidate_id,
+                depth=depth + 1,
+            )
         )
-    return tokens
+    return flattened
 
 
-def collect_candidates(candidates: list[dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], dict[str, str | None]]:
-    by_id: dict[str, dict[str, Any]] = {}
-    parent_by_id: dict[str, str | None] = {}
-
-    def visit(items: list[dict[str, Any]], current_parent_id: str | None) -> None:
-        for candidate in items:
-            candidate_id_value = candidate['candidate_id']
-            by_id[candidate_id_value] = candidate
-            parent_by_id[candidate_id_value] = current_parent_id
-            child = candidate.get('child_alignment_artifact') or {}
-            visit(child.get('candidates') or [], candidate_id_value)
-
-    visit(candidates, None)
-    return by_id, parent_by_id
+def candidate_ids_for_source_span(candidates: list[FlatCandidate], start: int, end: int) -> list[str]:
+    containing = [
+        candidate
+        for candidate in candidates
+        if candidate.source_start <= start and end <= candidate.source_end
+    ]
+    containing.sort(key=lambda item: (item.source_end - item.source_start, -item.depth, item.type, item.id))
+    return [candidate.id for candidate in containing]
 
 
-def candidate_hierarchy_ids(candidate_id: str, parent_by_id: dict[str, str | None]) -> list[str]:
+def candidate_ids_for_target_span(candidates: list[FlatCandidate], start: int, end: int) -> list[str]:
+    containing = [
+        candidate
+        for candidate in candidates
+        if candidate.target_start <= start and end <= candidate.target_end
+    ]
+    containing.sort(key=lambda item: (item.target_end - item.target_start, -item.depth, item.type, item.id))
+    return [candidate.id for candidate in containing]
+
+
+def hierarchy_ids(candidate_id: str, candidate_records: dict[str, FlatCandidate]) -> list[str]:
     ids = [candidate_id]
-    current = candidate_id
-    while parent_by_id.get(current):
-        current = parent_by_id[current] or current
-        ids.append(current)
+    current = candidate_records.get(candidate_id)
+    while current is not None and current.parent_id:
+        ids.append(current.parent_id)
+        current = candidate_records.get(current.parent_id)
     return ids
 
 
-def root_candidate_id(candidate_id: str, parent_by_id: dict[str, str | None]) -> str:
-    return candidate_hierarchy_ids(candidate_id, parent_by_id)[-1]
+def append_unique(left: list[str], right: list[str]) -> list[str]:
+    return list(dict.fromkeys([*left, *right]))
+
+
+def intro_ranges_for_token(
+    *,
+    token_start: int,
+    token_end: int,
+    intros: list[dict[str, Any]],
+    notes_by_intro: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    ranges: list[dict[str, Any]] = []
+    intro_ids: list[str] = []
+    footnote_ids: list[str] = []
+    for intro in intros:
+        span = intro.get('char_span_in_target') or {}
+        intro_start = int(span.get('start_char', 0) or 0)
+        intro_end = int(span.get('end_char', 0) or 0)
+        overlap_start = max(token_start, intro_start)
+        overlap_end = min(token_end, intro_end)
+        if overlap_start >= overlap_end:
+            continue
+        intro_id = intro['intro_id']
+        note = notes_by_intro.get(intro_id)
+        footnote_id = note.get('note_id') if note else None
+        intro_ids.append(intro_id)
+        if footnote_id:
+            footnote_ids.append(footnote_id)
+        ranges.append(
+            {
+                'introId': intro_id,
+                'start': overlap_start - token_start,
+                'end': overlap_end - token_start,
+                'footnoteId': footnote_id,
+            }
+        )
+    return ranges, list(dict.fromkeys(intro_ids)), list(dict.fromkeys(footnote_ids))
+
+
+def tokenize_surface(
+    *,
+    surface: str,
+    language: str,
+    segment_id: str,
+    offset: int,
+    unit_candidates: list[FlatCandidate],
+    fallback_candidate_ids: list[str],
+    source_start: int | None = None,
+    target_start: int | None = None,
+    intros: list[dict[str, Any]] | None = None,
+    notes_by_intro: dict[str, dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    tokens: list[dict[str, Any]] = []
+    intros = intros or []
+    notes_by_intro = notes_by_intro or {}
+    for index, match in enumerate(TOKEN_RE.finditer(surface), start=1):
+        local_start = match.start()
+        local_end = match.end()
+        if language == 'cs' and target_start is not None:
+            candidate_ids = append_unique(
+                candidate_ids_for_target_span(
+                    unit_candidates,
+                    target_start + local_start,
+                    target_start + local_end,
+                ),
+                fallback_candidate_ids,
+            )
+        elif source_start is not None:
+            candidate_ids = append_unique(
+                candidate_ids_for_source_span(
+                    unit_candidates,
+                    source_start + local_start,
+                    source_start + local_end,
+                ),
+                fallback_candidate_ids,
+            )
+        else:
+            candidate_ids = list(dict.fromkeys(fallback_candidate_ids))
+
+        token: dict[str, Any] = {
+            'id': f'{segment_id}-tok-{offset + local_start:06d}-{index:04d}',
+            'text': match.group(0),
+            'language': language,
+            'start': offset + local_start,
+            'end': offset + local_end,
+            'candidateIds': candidate_ids,
+        }
+        if source_start is not None:
+            token['sourceStart'] = source_start + local_start
+            token['sourceEnd'] = source_start + local_end
+        if target_start is not None:
+            token['targetStart'] = target_start + local_start
+            token['targetEnd'] = target_start + local_end
+        if language == 'cs' and intros:
+            ranges, intro_ids, footnote_ids = intro_ranges_for_token(
+                token_start=local_start,
+                token_end=local_end,
+                intros=intros,
+                notes_by_intro=notes_by_intro,
+            )
+            if ranges:
+                token['introRanges'] = ranges
+                token['introIds'] = intro_ids
+            if footnote_ids:
+                token['footnoteIds'] = footnote_ids
+        tokens.append(token)
+    return tokens
 
 
 def append_surface(
@@ -194,65 +403,103 @@ def append_surface(
     surface: str,
     language: str,
     segment_id: str,
-    candidate_ids: list[str],
-    sentence_join: bool = False,
+    unit_candidates: list[FlatCandidate],
+    fallback_candidate_ids: list[str],
+    source_start: int | None = None,
+    target_start: int | None = None,
+    intros: list[dict[str, Any]] | None = None,
+    notes_by_intro: dict[str, dict[str, Any]] | None = None,
 ) -> None:
     if not surface:
         return
+    cleaned = cleanup_duplicate_inline_punctuation(surface)
     previous = ''.join(text_parts)
-    separator = boundary_separator(previous, surface, sentence_join=sentence_join)
+    separator = boundary_separator(previous, cleaned)
     if separator:
         text_parts.append(separator)
     offset = len(''.join(text_parts))
-    text_parts.append(surface)
-    token_parts.extend(tokenize_into(surface, language, segment_id, candidate_ids, offset))
+    text_parts.append(cleaned)
+    token_parts.extend(
+        tokenize_surface(
+            surface=cleaned,
+            language=language,
+            segment_id=segment_id,
+            offset=offset,
+            unit_candidates=unit_candidates,
+            fallback_candidate_ids=fallback_candidate_ids,
+            source_start=source_start,
+            target_start=target_start,
+            intros=intros,
+            notes_by_intro=notes_by_intro,
+        )
+    )
 
 
-def build_hybrid_unit(
-    parent: dict[str, Any],
-    selected_ids: list[str],
-    selected_plan_by_id: dict[str, dict[str, Any]],
-    candidate_by_id: dict[str, dict[str, Any]],
-    parent_by_id: dict[str, str | None],
+def render_execution_unit(
+    root: dict[str, Any],
+    *,
+    selected_candidates: list[dict[str, Any]],
+    unit_candidates: list[FlatCandidate],
+    candidate_records: dict[str, FlatCandidate],
+    intros_by_candidate: dict[str, list[dict[str, Any]]],
+    notes_by_intro: dict[str, dict[str, Any]],
 ) -> tuple[str, list[dict[str, Any]]]:
-    parent_id = parent['candidate_id']
-    source_text = parent.get('source_surface_text') or ''
+    root_id = root['candidate_id']
+    source_text = root.get('source_surface_text') or ''
+    root_start, _ = span_start_end(root, 'source_span')
+    unit_id = build_execution_unit_id(root.get('source_unit_ids') or [])
+    segment_id = f'{root_id}:hybrid'
     text_parts: list[str] = []
     token_parts: list[dict[str, Any]] = []
-    segment_id = f'{parent_id}:hybrid'
-
-    selected_candidates = [candidate_by_id[candidate_id] for candidate_id in selected_ids if candidate_id in candidate_by_id]
+    selected_candidates = [
+        candidate
+        for candidate in selected_candidates
+        if selected_source_end(candidate) > selected_source_start(candidate)
+    ]
     selected_candidates.sort(
         key=lambda item: (
-            span_start_end(item)[0],
-            -(span_start_end(item)[1] - span_start_end(item)[0]),
+            selected_source_start(item),
+            selected_source_end(item),
+            item.get('application_order', 0),
+            item.get('candidate_id', ''),
         )
     )
 
     cursor = 0
-    for candidate in selected_candidates:
-        candidate_id_value = candidate['candidate_id']
-        start, end = span_start_end(candidate)
-        if start < cursor or end <= start:
+    for selected in selected_candidates:
+        selected_id = selected['candidate_id']
+        absolute_start = selected_source_start(selected)
+        absolute_end = selected_source_end(selected)
+        local_start = absolute_start - root_start
+        local_end = absolute_end - root_start
+        if local_start < cursor or local_end <= local_start:
             continue
         append_surface(
             text_parts=text_parts,
             token_parts=token_parts,
-            surface=source_text[cursor:start],
+            surface=source_text[cursor:local_start],
             language='pl',
             segment_id=segment_id,
-            candidate_ids=[parent_id],
+            unit_candidates=unit_candidates,
+            fallback_candidate_ids=[root_id],
+            source_start=root_start + cursor,
         )
-        replacement = selected_plan_by_id.get(candidate_id_value, {}).get('target_surface_text') or candidate.get('target_surface_text') or ''
+        target_surface = selected.get('target_surface_text') or selected.get('base_text') or ''
+        selected_record = candidate_records.get(selected_id)
+        fallback_ids = hierarchy_ids(selected_id, candidate_records) if selected_record else [selected_id, root_id]
         append_surface(
             text_parts=text_parts,
             token_parts=token_parts,
-            surface=replacement,
+            surface=target_surface,
             language='cs',
             segment_id=segment_id,
-            candidate_ids=candidate_hierarchy_ids(candidate_id_value, parent_by_id),
+            unit_candidates=unit_candidates,
+            fallback_candidate_ids=fallback_ids,
+            target_start=selected_target_start(selected, selected_record.target_start if selected_record else 0),
+            intros=intros_by_candidate.get(selected_id) or [],
+            notes_by_intro=notes_by_intro,
         )
-        cursor = end
+        cursor = local_end
 
     append_surface(
         text_parts=text_parts,
@@ -260,123 +507,150 @@ def build_hybrid_unit(
         surface=source_text[cursor:],
         language='pl',
         segment_id=segment_id,
-        candidate_ids=[parent_id],
+        unit_candidates=unit_candidates,
+        fallback_candidate_ids=[root_id],
+        source_start=root_start + cursor,
     )
     return ''.join(text_parts), token_parts
 
 
-def append_unit_to_paragraph(paragraph: ParagraphBuilder, parent: dict[str, Any], unit_text: str, unit_tokens: list[dict[str, Any]]) -> None:
+def append_unit_to_paragraphs(
+    *,
+    paragraphs: list[ParagraphBuilder],
+    paragraph_by_id: dict[str, ParagraphBuilder],
+    root: dict[str, Any],
+    unit_text: str,
+    unit_tokens: list[dict[str, Any]],
+    chapter_number: int,
+) -> None:
     if not unit_text:
         return
-    separator = boundary_separator(paragraph.text, unit_text, sentence_join=True)
-    if separator:
-        paragraph.text += separator
-    offset = len(paragraph.text)
-    paragraph.text += unit_text
-
-    paragraph.source_unit_ids.extend(parent.get('source_unit_ids') or [])
-    paragraph.target_unit_ids.extend(parent.get('target_unit_ids') or [])
-
-    for token in unit_tokens:
-        shifted = dict(token)
-        shifted['id'] = f'{paragraph.id}:hybrid-tok-{shifted["start"] + offset:06d}'
-        shifted['start'] += offset
-        shifted['end'] += offset
-        paragraph.tokens.append(shifted)
-        paragraph.candidate_ids.update(shifted['candidateIds'])
-
-
-def make_candidate_record(
-    candidate: dict[str, Any],
-    selected_plan_by_id: dict[str, dict[str, Any]],
-    parent_by_id: dict[str, str | None],
-    fallback_source_unit_ids: list[str],
-    fallback_target_unit_ids: list[str],
-) -> CandidateRecord:
-    candidate_id_value = candidate['candidate_id']
-    selected_plan = selected_plan_by_id.get(candidate_id_value) or {}
-    selected_source_span = selected_plan.get('source_span') or {}
-    return CandidateRecord(
-        id=candidate_id_value,
-        type=candidate.get('candidate_type') or 'span',
-        source_unit_ids=candidate.get('source_unit_ids') or fallback_source_unit_ids,
-        target_unit_ids=candidate.get('target_unit_ids') or fallback_target_unit_ids,
-        source_text=candidate.get('source_surface_text') or selected_source_span.get('surface') or '',
-        target_text=selected_plan.get('target_surface_text') or candidate.get('target_surface_text') or '',
-        score=candidate.get('alignment_confidence'),
-        parent_id=parent_by_id.get(candidate_id_value),
-    )
-
-
-def build_chapter(alignment: dict[str, Any], selected_candidates: list[dict[str, Any]], chapter_number: int) -> tuple[dict[str, Any], dict[str, Any]]:
-    candidate_by_id, parent_by_id = collect_candidates(alignment['candidates'])
-    selected_plan_by_id = {
-        candidate['candidate_id']: candidate
-        for candidate in selected_candidates
-        if candidate.get('candidate_id') in candidate_by_id
-    }
-
-    selected_by_root: dict[str, list[str]] = {}
-    for candidate_id_value in selected_plan_by_id:
-        root_id = root_candidate_id(candidate_id_value, parent_by_id)
-        selected_by_root.setdefault(root_id, []).append(candidate_id_value)
-
-    candidate_records: dict[str, CandidateRecord] = {}
-    paragraphs: list[ParagraphBuilder] = []
-    paragraph_by_id: dict[str, ParagraphBuilder] = {}
-
-    def ensure_candidate_record(
-        candidate_id_value: str,
-        fallback_source_unit_ids: list[str],
-        fallback_target_unit_ids: list[str],
-    ) -> None:
-        if candidate_id_value in candidate_records:
-            return
-        candidate = candidate_by_id.get(candidate_id_value)
-        if candidate is None:
-            return
-        candidate_records[candidate_id_value] = make_candidate_record(
-            candidate,
-            selected_plan_by_id,
-            parent_by_id,
-            fallback_source_unit_ids,
-            fallback_target_unit_ids,
-        )
-
-    for parent in alignment['candidates']:
-        parent_id = parent['candidate_id']
-        source_unit_ids = parent.get('source_unit_ids') or []
-        target_unit_ids = parent.get('target_unit_ids') or []
-        paragraph_id = paragraph_id_from_unit(source_unit_ids[0] if source_unit_ids else None, f'{chapter_id(chapter_number)}-p-{len(paragraphs) + 1:04d}')
-        target_paragraph_id = paragraph_id_from_unit(
-            target_unit_ids[0] if target_unit_ids else None,
-            f'{chapter_id(chapter_number)}-target-p-{len(paragraphs) + 1:04d}',
-        )
+    source_unit_ids = root.get('source_unit_ids') or []
+    target_unit_ids = root.get('target_unit_ids') or []
+    source_paragraph_ids = list(dict.fromkeys(paragraph_id_from_unit(unit_id, '') for unit_id in source_unit_ids))
+    source_paragraph_ids = [paragraph_id for paragraph_id in source_paragraph_ids if paragraph_id]
+    target_paragraph_ids = list(dict.fromkeys(paragraph_id_from_unit(unit_id, '') for unit_id in target_unit_ids))
+    target_paragraph_ids = [paragraph_id for paragraph_id in target_paragraph_ids if paragraph_id]
+    text_parts = re.split(r'(\n+)', unit_text)
+    cursor = 0
+    rendered_part_index = 0
+    for raw_part in text_parts:
+        if not raw_part:
+            continue
+        part_start = cursor
+        part_end = cursor + len(raw_part)
+        cursor = part_end
+        if raw_part.isspace() and '\n' in raw_part:
+            rendered_part_index += 1
+            continue
+        paragraph_id = source_paragraph_ids[min(rendered_part_index, len(source_paragraph_ids) - 1)] if source_paragraph_ids else f'{chapter_id(chapter_number)}-p-{len(paragraphs) + 1:04d}'
+        target_paragraph_id = target_paragraph_ids[min(rendered_part_index, len(target_paragraph_ids) - 1)] if target_paragraph_ids else f'{chapter_id(chapter_number)}-target-p-{len(paragraphs) + 1:04d}'
         paragraph = paragraph_by_id.get(paragraph_id)
         if paragraph is None:
             paragraph = ParagraphBuilder(id=paragraph_id, target_id=target_paragraph_id)
             paragraph_by_id[paragraph_id] = paragraph
             paragraphs.append(paragraph)
+        separator = boundary_separator(paragraph.text, raw_part, sentence_join=True)
+        if separator:
+            paragraph.text += separator
+        offset = len(paragraph.text)
+        paragraph.text += raw_part
+        paragraph.source_unit_ids.extend(source_unit_ids)
+        paragraph.target_unit_ids.extend(target_unit_ids)
+        for token in unit_tokens:
+            if token['start'] < part_start or token['end'] > part_end:
+                continue
+            shifted = dict(token)
+            shifted['id'] = f'{paragraph.id}:hybrid-tok-{shifted["start"] - part_start + offset:06d}'
+            shifted['start'] = shifted['start'] - part_start + offset
+            shifted['end'] = shifted['end'] - part_start + offset
+            paragraph.tokens.append(shifted)
+            paragraph.candidate_ids.update(shifted['candidateIds'])
 
-        ensure_candidate_record(parent_id, source_unit_ids, target_unit_ids)
 
-        for selected_id in selected_by_root.get(parent_id, []):
-            for hierarchy_id in candidate_hierarchy_ids(selected_id, parent_by_id):
-                ensure_candidate_record(hierarchy_id, source_unit_ids, target_unit_ids)
+def candidate_to_json(record: FlatCandidate) -> dict[str, Any]:
+    return {
+        'id': record.id,
+        'type': record.type,
+        'sourceUnitIds': record.source_unit_ids,
+        'targetUnitIds': record.target_unit_ids,
+        'sourceText': record.source_text,
+        'targetText': record.target_text,
+        'score': record.score,
+        'scoreComponents': record.score_components,
+        'tokenIds': list(dict.fromkeys(record.token_ids)),
+        'sourceTokenIds': list(dict.fromkeys(record.source_token_ids)),
+        'targetTokenIds': list(dict.fromkeys(record.target_token_ids)),
+        'parentId': record.parent_id,
+        'rootId': record.root_id,
+        'sourceStart': record.source_start,
+        'sourceEnd': record.source_end,
+        'targetStart': record.target_start,
+        'targetEnd': record.target_end,
+        'depth': record.depth,
+        'selected': record.selected,
+        'selectionMode': record.selection_mode,
+        'applicationOrder': record.application_order,
+    }
 
-        unit_text, unit_tokens = build_hybrid_unit(
-            parent,
-            selected_by_root.get(parent_id, []),
-            selected_plan_by_id,
-            candidate_by_id,
-            parent_by_id,
+
+def build_chapter(
+    chapter_alignment: dict[str, Any],
+    *,
+    selected_by_unit: dict[str, list[dict[str, Any]]],
+    selected_by_id: dict[str, dict[str, Any]],
+    intros_by_candidate: dict[str, list[dict[str, Any]]],
+    notes_by_intro: dict[str, dict[str, Any]],
+    glossary_by_intro: dict[str, dict[str, Any]],
+    chapter_number: int,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    paragraphs: list[ParagraphBuilder] = []
+    paragraph_by_id: dict[str, ParagraphBuilder] = {}
+    candidate_records: dict[str, FlatCandidate] = {}
+    candidates_by_unit: dict[str, list[FlatCandidate]] = {}
+
+    for root in chapter_alignment['candidates']:
+        unit_id = build_execution_unit_id(root.get('source_unit_ids') or [])
+        flat_candidates = flatten_candidate_tree(
+            root,
+            unit_id=unit_id,
+            absolute_source_offset=0,
+            absolute_target_offset=0,
         )
-        append_unit_to_paragraph(paragraph, parent, unit_text, unit_tokens)
+        candidates_by_unit[unit_id] = flat_candidates
+        for candidate in flat_candidates:
+            if candidate.id in selected_by_id:
+                selected = selected_by_id[candidate.id]
+                candidate.selected = True
+                candidate.selection_mode = selected.get('selection_mode')
+                candidate.application_order = selected.get('application_order')
+                candidate.target_text = selected.get('target_surface_text') or candidate.target_text
+            candidate_records[candidate.id] = candidate
 
+    for root in chapter_alignment['candidates']:
+        unit_id = build_execution_unit_id(root.get('source_unit_ids') or [])
+        unit_text, unit_tokens = render_execution_unit(
+            root,
+            selected_candidates=selected_by_unit.get(unit_id, []),
+            unit_candidates=candidates_by_unit[unit_id],
+            candidate_records=candidate_records,
+            intros_by_candidate=intros_by_candidate,
+            notes_by_intro=notes_by_intro,
+        )
+        append_unit_to_paragraphs(
+            paragraphs=paragraphs,
+            paragraph_by_id=paragraph_by_id,
+            root=root,
+            unit_text=unit_text,
+            unit_tokens=unit_tokens,
+            chapter_number=chapter_number,
+        )
+
+    used_footnote_ids: set[str] = set()
     for paragraph in paragraphs:
         for token in paragraph.tokens:
-            for candidate_id_value in token['candidateIds']:
-                record = candidate_records.get(candidate_id_value)
+            for candidate_id in token['candidateIds']:
+                record = candidate_records.get(candidate_id)
                 if record is None:
                     continue
                 record.token_ids.append(token['id'])
@@ -384,6 +658,7 @@ def build_chapter(alignment: dict[str, Any], selected_candidates: list[dict[str,
                     record.target_token_ids.append(token['id'])
                 else:
                     record.source_token_ids.append(token['id'])
+            used_footnote_ids.update(token.get('footnoteIds') or [])
 
     paragraphs_out: list[dict[str, Any]] = []
     for paragraph in paragraphs:
@@ -406,82 +681,161 @@ def build_chapter(alignment: dict[str, Any], selected_candidates: list[dict[str,
             }
         )
 
-    candidates_out = [
+    footnotes_out = []
+    for note in notes_by_intro.values():
+        note_id = note.get('note_id')
+        if note_id not in used_footnote_ids:
+            continue
+        footnotes_out.append(
+            {
+                'id': note_id,
+                'introId': note.get('anchor', {}).get('intro_id'),
+                'candidateId': note.get('candidate_id'),
+                'sourceUnitId': note.get('source_unit_id'),
+                'targetLemma': note.get('target_lemma'),
+                'noteType': note.get('note_type'),
+                'targetFragment': note.get('target_fragment'),
+                'sourceLiteralFragment': note.get('source_literal_fragment'),
+                'sourceTranslationFragment': note.get('source_translation_fragment'),
+                'text': render_footnote_text(note),
+            }
+        )
+    footnotes_out.sort(key=lambda item: item['id'])
+
+    chapter_intro_ids = {
+        intro_id
+        for paragraph in paragraphs
+        for token in paragraph.tokens
+        for intro_id in token.get('introIds') or []
+    }
+    glossary_out = [
         {
-            'id': record.id,
-            'type': record.type,
-            'sourceUnitIds': record.source_unit_ids,
-            'targetUnitIds': record.target_unit_ids,
-            'sourceText': record.source_text,
-            'targetText': record.target_text,
-            'score': record.score,
-            'tokenIds': list(dict.fromkeys(record.token_ids)),
-            'sourceTokenIds': list(dict.fromkeys(record.source_token_ids)),
-            'targetTokenIds': list(dict.fromkeys(record.target_token_ids)),
-            'parentId': record.parent_id,
+            'id': entry.get('target_lemma') or entry.get('headword_target_display'),
+            'term': entry.get('headword_target_display') or entry.get('target_lemma'),
+            'explanation': entry.get('headword_source_display') or '',
+            'language': 'cs',
+            'firstIntroId': entry.get('first_intro_id'),
+            'firstNoteId': entry.get('first_note_id'),
+            'surfaceForms': entry.get('all_surface_forms_target') or [],
         }
-        for record in candidate_records.values()
+        for intro_id, entry in glossary_by_intro.items()
+        if intro_id in chapter_intro_ids
     ]
+
+    candidates_out = [candidate_to_json(record) for record in candidate_records.values()]
+    candidates_out.sort(key=lambda item: (item['sourceStart'], item['sourceEnd'], item['depth'], item['id']))
 
     chapter = {
         'id': chapter_id(chapter_number),
         'title': CHAPTER_TITLES_PL[chapter_number],
         'paragraphs': paragraphs_out,
         'candidates': candidates_out,
-        'footnotes': [],
-        'glossary': [],
+        'footnotes': footnotes_out,
+        'glossary': glossary_out,
     }
     stats = {
         'chapterId': chapter['id'],
-        'sourceArtifactId': alignment['artifact_id'],
-        'selectedCandidateCount': len(selected_plan_by_id),
+        'sourceArtifactId': chapter_alignment['artifact_id'],
+        'selectedCandidateCount': sum(len(items) for unit_id, items in selected_by_unit.items() if f'-ch-{chapter_number:03d}' in unit_id),
         'paragraphCount': len(paragraphs_out),
         'candidateCount': len(candidates_out),
         'tokenCount': sum(len(paragraph.tokens) for paragraph in paragraphs),
+        'introTokenCount': sum(
+            1
+            for paragraph in paragraphs
+            for token in paragraph.tokens
+            if token.get('introIds')
+        ),
+        'footnoteCount': len(footnotes_out),
     }
     return chapter, stats
 
 
 def build_fixture() -> dict[str, Any]:
+    alignment = json.loads(ALIGNMENT_SOURCE.read_text(encoding='utf-8'))
     plan = json.loads(PLAN_SOURCE.read_text(encoding='utf-8'))
-    selected_by_chapter: dict[int, list[dict[str, Any]]] = {number: [] for number in VOLUME_1_CHAPTERS}
+    notes_plan = json.loads(NOTES_SOURCE.read_text(encoding='utf-8'))
+
+    selected_by_id = {candidate['candidate_id']: candidate for candidate in plan.get('selected_candidates') or []}
+    selected_by_unit: dict[str, list[dict[str, Any]]] = {}
     for candidate in plan.get('selected_candidates') or []:
         chapter_number = chapter_number_from_candidate(candidate)
-        if chapter_number in selected_by_chapter:
-            selected_by_chapter[chapter_number].append(candidate)
+        if chapter_number not in VOLUME_1_CHAPTERS:
+            continue
+        selected_by_unit.setdefault(candidate['source_unit_id'], []).append(candidate)
+    for candidates in selected_by_unit.values():
+        candidates.sort(
+            key=lambda item: (
+                selected_source_start(item),
+                selected_source_end(item),
+                item.get('application_order', 0),
+                item.get('candidate_id', ''),
+            )
+        )
+
+    intros_by_candidate: dict[str, list[dict[str, Any]]] = {}
+    for intro in plan.get('intro_annotations') or []:
+        chapter_number = chapter_number_from_candidate(intro)
+        if chapter_number in VOLUME_1_CHAPTERS:
+            intros_by_candidate.setdefault(intro['candidate_id'], []).append(intro)
+    for intros in intros_by_candidate.values():
+        intros.sort(
+            key=lambda item: (
+                item.get('char_span_in_target', {}).get('start_char', 0),
+                item.get('char_span_in_target', {}).get('end_char', 0),
+                item.get('intro_id', ''),
+            )
+        )
+
+    notes_by_intro = {
+        note['anchor']['intro_id']: note
+        for note in notes_plan.get('footnotes') or []
+        if chapter_number_from_candidate(note) in VOLUME_1_CHAPTERS
+    }
+    glossary_by_intro = {
+        entry['first_intro_id']: entry
+        for entry in notes_plan.get('glossary') or []
+        if entry.get('first_intro_id')
+    }
 
     chapters: list[dict[str, Any]] = []
     chapter_stats: list[dict[str, Any]] = []
-    source_artifact_paths: list[str] = []
-    source_language = 'pl'
-    target_language = 'cs'
-
-    for chapter_number in VOLUME_1_CHAPTERS:
-        alignment_path = ALIGNMENT_DIR / f'chapter_{chapter_number:03d}.json'
-        alignment = json.loads(alignment_path.read_text(encoding='utf-8'))
-        source_artifact_paths.append(str(alignment_path))
-        source_language = alignment.get('source_lang') or source_language
-        target_language = alignment.get('target_lang') or target_language
-        chapter, stats = build_chapter(alignment, selected_by_chapter[chapter_number], chapter_number)
+    for chapter_alignment in alignment.get('chapter_alignments') or []:
+        chapter_number = chapter_number_from_text(chapter_alignment.get('source_parent_unit_id'))
+        if chapter_number not in VOLUME_1_CHAPTERS:
+            continue
+        chapter, stats = build_chapter(
+            chapter_alignment,
+            selected_by_unit=selected_by_unit,
+            selected_by_id=selected_by_id,
+            intros_by_candidate=intros_by_candidate,
+            notes_by_intro=notes_by_intro,
+            glossary_by_intro=glossary_by_intro,
+            chapter_number=chapter_number,
+        )
         chapters.append(chapter)
         chapter_stats.append(stats)
 
+    chapters.sort(key=lambda item: item['id'])
+    chapter_stats.sort(key=lambda item: item['chapterId'])
+
     return {
         'metadata': {
-            'sourceArtifactPath': str(ALIGNMENT_DIR),
-            'sourceArtifactPaths': source_artifact_paths,
+            'sourceArtifactPath': str(ALIGNMENT_SOURCE),
             'hybridizationPlanPath': str(PLAN_SOURCE),
+            'notesGlossaryPlanPath': str(NOTES_SOURCE),
+            'sourceArtifactId': alignment.get('artifact_id'),
             'hybridizationPlanAlignmentArtifactId': plan.get('metadata', {}).get('alignment_artifact_id'),
             'generatedAt': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
-            'fixtureKind': 'szwejk-volume-1-fullbook-hybridization-derived',
+            'fixtureKind': 'szwejk-volume-1-v13-reader-derived',
             'chapterStats': chapter_stats,
         },
         'work': {
             'id': 'work-szwejk',
             'slug': 'szwejk',
             'title': 'Dobry wojak Szwejk',
-            'sourceLanguage': source_language,
-            'targetLanguage': target_language,
+            'sourceLanguage': alignment.get('source_lang') or 'pl',
+            'targetLanguage': alignment.get('target_lang') or 'cs',
             'volumes': [
                 {
                     'id': 'volume-1',
