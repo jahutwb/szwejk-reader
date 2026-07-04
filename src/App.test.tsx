@@ -2,6 +2,8 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import appSource from './App.tsx?raw'
+import cssSource from './index.css?raw'
 import fixture from '../public/data/fixtures/szwejk-mini/reader-fixture.json'
 import type { ReaderFixture, Token } from './domain/types'
 
@@ -93,7 +95,7 @@ describe('App', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
 
-    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('96')
+    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('95')
   })
 
   it('loads the whole first volume from v13 plan and full hierarchical alignment artifacts', () => {
@@ -150,6 +152,17 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /następna strona/i }))
 
     expect(within(pageFrame).queryByRole('heading', { name: /wstęp úvod/i })).not.toBeInTheDocument()
+  })
+
+  it('uses larger long-form reader typography for screen reading', () => {
+    expect(cssSource).toContain('--reader-font-size: clamp(16px, 3.18cqw, 19px);')
+    expect(cssSource).toContain('--reader-line-height: 1.34;')
+  })
+
+  it('paginates with an estimated line budget instead of raw character capacity', () => {
+    expect(appSource).toContain('const PAGE_LINE_CAPACITY')
+    expect(appSource).toContain('function estimateTextLineCost')
+    expect(appSource).not.toContain('const PAGE_CHAR_CAPACITY')
   })
 
   it('contains intro annotations, footnotes, and hierarchical candidate memberships from source artifacts', () => {

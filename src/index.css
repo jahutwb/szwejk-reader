@@ -13,8 +13,8 @@
   --border: 38 19% 78%;
   --input: 38 19% 78%;
   --ring: 214 44% 24%;
-  --reader-font-size: clamp(14px, 3.01cqw, 18px);
-  --reader-line-height: 1.16;
+  --reader-font-size: clamp(16px, 3.18cqw, 19px);
+  --reader-line-height: 1.34;
   --reader-page-width: 129mm;
   --reader-page-height: 198mm;
   --reader-margin-left: 15.5039%;

@@ -52,9 +52,10 @@ type ReaderProgress = {
 const FIXTURE_VOLUME_ID = 'volume-1'
 const PROGRESS_KEY = 'szwejk-reader.progress'
 const OVERRIDES_KEY = 'szwejk-reader.overrides'
-const PAGE_CHAR_CAPACITY = 1650
-const MIN_TRAILING_PAGE_CHARS = 260
-const CHAPTER_TITLE_CHAR_COST = 360
+const ESTIMATED_CHARS_PER_LINE = 56
+const PAGE_LINE_CAPACITY = 33
+const MIN_TRAILING_PAGE_LINES = 4
+const CHAPTER_TITLE_LINE_COST = 5
 
 const defaultVolumes: Volume[] = [
   { id: 'volume-1', label: 'Tom I', status: 'available', chapters: [] },
@@ -96,16 +97,23 @@ function getReaderSegment(paragraph: Paragraph) {
   return paragraph.segments.find((segment) => segment.language === 'hybrid') ?? paragraph.segments.find((segment) => segment.language === 'pl') ?? paragraph.segments[0]
 }
 
-function estimateParagraphLength(paragraph: Paragraph): number {
-  const readerSegment = getReaderSegment(paragraph)
-  return readerSegment?.text.length ?? 0
+function estimateTextLineCost(text: string): number {
+  const compactLength = text.replace(/\s+/g, ' ').trim().length
+  return Math.max(1, Math.ceil(compactLength / ESTIMATED_CHARS_PER_LINE))
 }
 
-function findSliceEnd(segment: RenderSegment, start: number, capacity: number): number {
+function estimateParagraphLineCost(paragraph: Paragraph): number {
+  const readerSegment = getReaderSegment(paragraph)
+  return estimateTextLineCost(readerSegment?.text ?? '')
+}
+
+function findSliceEnd(segment: RenderSegment, start: number, lineCapacity: number): number {
   const textLength = segment.text.length
+  const capacity = Math.max(lineCapacity, MIN_TRAILING_PAGE_LINES) * ESTIMATED_CHARS_PER_LINE
   if (start + capacity >= textLength) return textLength
   const target = start + capacity
-  const candidates = segment.tokens.filter((token) => token.end <= target && token.end > start + MIN_TRAILING_PAGE_CHARS)
+  const minTrailingChars = MIN_TRAILING_PAGE_LINES * ESTIMATED_CHARS_PER_LINE
+  const candidates = segment.tokens.filter((token) => token.end <= target && token.end > start + minTrailingChars)
   if (candidates.length > 0) return candidates[candidates.length - 1].end
   const fallback = segment.tokens.find((token) => token.end > start)
   return fallback?.end ?? textLength
@@ -160,7 +168,7 @@ function buildReaderPages(chapters: Chapter[]): ReaderPage[] {
   const pages: ReaderPage[] = []
   for (const chapter of chapters) {
     let current: ReaderPageBlock[] = []
-    let currentLength = CHAPTER_TITLE_CHAR_COST
+    let currentLineCost = CHAPTER_TITLE_LINE_COST
     let pageIndexInChapter = 1
 
     const pushPage = () => {
@@ -175,7 +183,7 @@ function buildReaderPages(chapters: Chapter[]): ReaderPage[] {
         footnotes: collectPageFootnotes(chapter, current),
       })
       current = []
-      currentLength = 0
+      currentLineCost = 0
       pageIndexInChapter += 1
     }
 
@@ -185,25 +193,25 @@ function buildReaderPages(chapters: Chapter[]): ReaderPage[] {
       let start = 0
       let sliceIndex = 0
       while (start < segment.text.length) {
-        if (current.length > 0 && PAGE_CHAR_CAPACITY - currentLength < MIN_TRAILING_PAGE_CHARS) {
+        if (current.length > 0 && PAGE_LINE_CAPACITY - currentLineCost < MIN_TRAILING_PAGE_LINES) {
           pushPage()
         }
-        const remaining = PAGE_CHAR_CAPACITY - currentLength
-        const end = findSliceEnd(segment, start, Math.max(remaining, MIN_TRAILING_PAGE_CHARS))
+        const remaining = PAGE_LINE_CAPACITY - currentLineCost
+        const end = findSliceEnd(segment, start, Math.max(remaining, MIN_TRAILING_PAGE_LINES))
         const sliced = sliceParagraph(paragraph, start, end)
-        const slicedLength = estimateParagraphLength(sliced)
+        const slicedLineCost = estimateParagraphLineCost(sliced)
         current.push({
           id: `${paragraph.id}:page-slice:${sliceIndex}:${start}:${end}`,
           paragraph: sliced,
           continuation: start > 0,
         })
-        currentLength += slicedLength
+        currentLineCost += slicedLineCost
         start = end
         sliceIndex += 1
         while (start < segment.text.length && /\s/.test(segment.text[start])) {
           start += 1
         }
-        if (start < segment.text.length && currentLength >= PAGE_CHAR_CAPACITY) {
+        if (start < segment.text.length && currentLineCost >= PAGE_LINE_CAPACITY) {
           pushPage()
         }
       }
