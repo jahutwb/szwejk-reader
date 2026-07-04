@@ -29,4 +29,4 @@
 
 ## Current Phase
 
-The current phase is MVP-0: a Vite/React reader shell with a small fixture, runtime validation, debug token clicks, local telemetry, and local override export. Do not implement final page-by-page pagination, payments, accounts, or the full alignment editor until Jan explicitly asks for them.
+The current phase is MVP-0: a Vite/React public reader shell with a small fixture, runtime validation, a book-like single-page reader view, simple page navigation, token counterpart popovers, local telemetry, and debug/admin tools hidden behind `?debug=1`. Do not implement final typographic pagination, payments, accounts, public correction workflows, or the full alignment editor until Jan explicitly asks for them.

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Download, Lock, Minus, Plus, Sparkles } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { BookOpen, Bug, ChevronLeft, ChevronRight, Download, Lock, Minus, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { loadMiniFixture } from '@/data/fixture'
 import { findSmallestCandidateForToken } from '@/domain/selection'
@@ -15,6 +15,21 @@ type TokenSelection = {
   segmentId: string
   candidateIds: string[]
   activeCandidate?: Candidate
+}
+
+type ReaderPage = {
+  id: string
+  paragraphs: Paragraph[]
+}
+
+type ReaderProgress = {
+  workId: string
+  volumeId: string
+  chapterId: string
+  paragraphId: string
+  segmentId?: string
+  tokenId?: string
+  updatedAt: string
 }
 
 const FIXTURE_VOLUME_ID = 'volume-1'
@@ -48,8 +63,58 @@ function writeOverrides(overrides: ReaderOverride[]): void {
   localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides))
 }
 
+function readProgress(): ReaderProgress | null {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? 'null') as ReaderProgress | null
+    return parsed?.paragraphId ? parsed : null
+  } catch {
+    return null
+  }
+}
+
 function getFirstAvailableChapter(fixture: ReaderFixture | null): Chapter | undefined {
   return fixture?.work.volumes.find((volume) => volume.id === FIXTURE_VOLUME_ID)?.chapters[0]
+}
+
+function getSourceSegment(paragraph: Paragraph) {
+  return paragraph.segments.find((segment) => segment.language === 'pl') ?? paragraph.segments[0]
+}
+
+function estimateParagraphLength(paragraph: Paragraph): number {
+  const sourceSegment = getSourceSegment(paragraph)
+  return sourceSegment?.text.length ?? 0
+}
+
+function getApproxPageCapacity(fontSize: number): number {
+  return Math.max(520, Math.round(1330 - fontSize * 32))
+}
+
+function buildReaderPages(chapter: Chapter | undefined, fontSize: number): ReaderPage[] {
+  if (!chapter) return []
+  const capacity = getApproxPageCapacity(fontSize)
+  const pages: ReaderPage[] = []
+  let current: Paragraph[] = []
+  let currentLength = 0
+
+  for (const paragraph of chapter.paragraphs) {
+    const paragraphLength = estimateParagraphLength(paragraph)
+    const nextLength = currentLength + paragraphLength
+
+    if (current.length > 0 && nextLength > capacity) {
+      pages.push({ id: `${chapter.id}-page-${pages.length + 1}`, paragraphs: current })
+      current = []
+      currentLength = 0
+    }
+
+    current.push(paragraph)
+    currentLength += paragraphLength
+  }
+
+  if (current.length > 0) {
+    pages.push({ id: `${chapter.id}-page-${pages.length + 1}`, paragraphs: current })
+  }
+
+  return pages
 }
 
 function downloadJson(filename: string, value: unknown): void {
@@ -63,6 +128,10 @@ function downloadJson(filename: string, value: unknown): void {
   URL.revokeObjectURL(url)
 }
 
+function getDebugMode(): boolean {
+  return new URLSearchParams(window.location.search).get('debug') === '1'
+}
+
 function App() {
   const [view, setView] = useState<View>('library')
   const [fixture, setFixture] = useState<ReaderFixture | null>(null)
@@ -70,10 +139,25 @@ function App() {
   const [fontSize, setFontSize] = useState(() => readNumber(FONT_KEY, 18))
   const [selection, setSelection] = useState<TokenSelection | null>(null)
   const [overrides, setOverrides] = useState<ReaderOverride[]>(() => readOverrides())
+  const [currentLocation, setCurrentLocation] = useState<ReaderProgress | null>(() => readProgress())
+  const [currentPageIndex, setCurrentPageIndex] = useState(0)
 
+  const debugMode = useMemo(() => getDebugMode(), [])
   const work = fixture?.work
   const volumes = work?.volumes ?? defaultVolumes
   const activeChapter = useMemo(() => getFirstAvailableChapter(fixture), [fixture])
+  const pages = useMemo(() => buildReaderPages(activeChapter, fontSize), [activeChapter, fontSize])
+  const resolvedPageIndex = useMemo(() => {
+    if (pages.length === 0) return 0
+    const paragraphId = currentLocation?.paragraphId
+    if (paragraphId) {
+      const indexFromLocation = pages.findIndex((page) => page.paragraphs.some((paragraph) => paragraph.id === paragraphId))
+      if (indexFromLocation >= 0) return indexFromLocation
+    }
+    return Math.min(currentPageIndex, pages.length - 1)
+  }, [currentLocation?.paragraphId, currentPageIndex, pages])
+  const currentPage = pages[resolvedPageIndex]
+  const pageCount = Math.max(pages.length, 1)
 
   useEffect(() => {
     let alive = true
@@ -97,6 +181,53 @@ function App() {
     localStorage.setItem(FONT_KEY, String(fontSize))
   }, [fontSize])
 
+  const writeProgress = useCallback(
+    (progress: Omit<ReaderProgress, 'workId' | 'volumeId' | 'chapterId' | 'updatedAt'>) => {
+      if (!activeChapter) return
+      const nextProgress: ReaderProgress = {
+        workId: work?.id ?? 'work-szwejk',
+        volumeId: FIXTURE_VOLUME_ID,
+        chapterId: activeChapter.id,
+        ...progress,
+        updatedAt: new Date().toISOString(),
+      }
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify(nextProgress))
+      setCurrentLocation(nextProgress)
+    },
+    [activeChapter, work?.id],
+  )
+
+  const goToPage = useCallback(
+    (nextIndex: number) => {
+      if (!pages.length) return
+      const boundedIndex = Math.min(Math.max(nextIndex, 0), pages.length - 1)
+      const nextPage = pages[boundedIndex]
+      const firstParagraph = nextPage.paragraphs[0]
+      const firstSegment = firstParagraph ? getSourceSegment(firstParagraph) : undefined
+      setCurrentPageIndex(boundedIndex)
+      setSelection(null)
+      if (firstParagraph) {
+        writeProgress({
+          paragraphId: firstParagraph.id,
+          segmentId: firstSegment?.id,
+          tokenId: firstSegment?.tokens[0]?.id,
+        })
+      }
+    },
+    [pages, writeProgress],
+  )
+
+  useEffect(() => {
+    if (view !== 'reader') return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') goToPage(resolvedPageIndex - 1)
+      if (event.key === 'ArrowRight') goToPage(resolvedPageIndex + 1)
+      if (event.key === 'Escape') setSelection(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [goToPage, resolvedPageIndex, view])
+
   function openReader() {
     setView('reader')
   }
@@ -113,20 +244,15 @@ function App() {
       activeCandidate,
     }
     setSelection(nextSelection)
-    const progress = {
-      workId: work?.id ?? 'work-szwejk',
-      volumeId: FIXTURE_VOLUME_ID,
-      chapterId: chapter.id,
+    writeProgress({
       paragraphId: paragraph.id,
       segmentId,
       tokenId: token.id,
-      updatedAt: new Date().toISOString(),
-    }
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress))
+    })
     logWordClick({
-      workId: progress.workId,
-      volumeId: progress.volumeId,
-      chapterId: progress.chapterId,
+      workId: work?.id ?? 'work-szwejk',
+      volumeId: FIXTURE_VOLUME_ID,
+      chapterId: chapter.id,
       paragraphId: paragraph.id,
       tokenId: token.id,
       tokenText: token.text,
@@ -172,195 +298,272 @@ function App() {
   const exportOverrides = () => downloadJson('szwejk-reader-overrides.json', overrides)
 
   if (view === 'reader') {
+    const canGoBack = resolvedPageIndex > 0
+    const canGoForward = resolvedPageIndex < pages.length - 1
+
     return (
-      <main className="min-h-screen px-4 py-4 text-foreground sm:px-6 lg:px-8" data-testid="reader-screen">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4">
-          <header className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <button className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setView('library')}>
-                Biblioteczka
-              </button>
-              <h1 className="mt-1 text-2xl font-semibold tracking-normal">{work?.title ?? 'Dobry wojak Szwejk'}</h1>
-              <p className="text-sm text-muted-foreground">MVP-0, debugowy przepływ akapitów, fixture rozdziału 1</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setFontSize((value) => Math.max(15, value - 1))} aria-label="Zmniejsz font">
-                <Minus className="h-4 w-4" />
-              </Button>
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Font</span>
-                <input
-                  className="w-28 accent-primary"
-                  type="range"
-                  min="15"
-                  max="24"
-                  value={fontSize}
-                  onChange={(event) => setFontSize(Number(event.target.value))}
-                />
-                <span className="w-10 text-right tabular-nums">{fontSize}px</span>
-              </label>
-              <Button variant="outline" size="sm" onClick={() => setFontSize((value) => Math.min(24, value + 1))} aria-label="Zwiększ font">
-                <Plus className="h-4 w-4" />
-              </Button>
-              <Button variant="secondary" size="sm" onClick={exportOverrides}>
-                <Download className="h-4 w-4" />
-                Pobierz moje poprawki JSON
-              </Button>
-            </div>
-          </header>
-
-          {loadError ? <p className="rounded-md border border-border bg-muted p-4 text-sm">{loadError}</p> : null}
-
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <article className="min-h-[70vh] rounded-lg border border-border bg-background/82 px-4 py-5 shadow-sm sm:px-7">
-              <h2 className="mb-5 text-lg font-semibold">{activeChapter?.title ?? 'Ładowanie fixture’a'}</h2>
-              <div className="mx-auto flex max-w-[var(--reader-page-width)] flex-col gap-7">
-                {activeChapter?.paragraphs.map((paragraph) => (
-                  <section
-                    key={paragraph.id}
-                    className="grid gap-3 border-b border-border/70 pb-6 last:border-0"
-                    data-work-id={work?.id}
-                    data-volume-id={FIXTURE_VOLUME_ID}
-                    data-chapter-id={activeChapter.id}
-                    data-paragraph-id={paragraph.id}
-                  >
-                    {paragraph.segments.map((segment) => (
-                      <p
-                        key={segment.id}
-                        className={cn(
-                          'm-0 text-pretty',
-                          segment.language === 'pl' ? 'font-serif text-[length:var(--reader-font-size)] leading-[var(--reader-line-height)]' : 'text-sm leading-7 text-muted-foreground',
-                        )}
-                        lang={segment.language}
-                        data-work-id={work?.id}
-                        data-volume-id={FIXTURE_VOLUME_ID}
-                        data-chapter-id={activeChapter.id}
-                        data-paragraph-id={paragraph.id}
-                        data-segment-id={segment.id}
-                        data-candidate-ids={segment.candidateIds.join(' ')}
-                      >
-                        {segment.tokens.map((token) => {
-                          const activeRange = selection?.activeCandidate?.tokenIds.includes(token.id)
-                          const clicked = selection?.token.id === token.id
-                          return (
-                            <span key={token.id}>
-                              <span
-                                role="button"
-                                tabIndex={0}
-                                data-testid="reader-token"
-                                className={cn('reader-token', activeRange && 'reader-token-active', clicked && 'reader-token-clicked')}
-                                onClick={() => handleTokenClick(paragraph, segment.id, token)}
-                                onKeyDown={(event) => {
-                                  if (event.key === 'Enter' || event.key === ' ') {
-                                    event.preventDefault()
-                                    handleTokenClick(paragraph, segment.id, token)
-                                  }
-                                }}
-                                data-work-id={work?.id}
-                                data-volume-id={FIXTURE_VOLUME_ID}
-                                data-chapter-id={activeChapter.id}
-                                data-paragraph-id={paragraph.id}
-                                data-segment-id={segment.id}
-                                data-token-id={token.id}
-                                data-candidate-ids={token.candidateIds.join(' ')}
-                              >
-                                {token.text}
-                              </span>{' '}
-                            </span>
-                          )
-                        })}
-                      </p>
-                    ))}
-                  </section>
-                ))}
-              </div>
-            </article>
-
-            <aside className="rounded-lg border border-border bg-background/88 p-4 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-auto">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-base font-semibold">Token debug</h2>
-                <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{overrides.length} override</span>
-              </div>
-              {selection ? (
-                <div className="mt-4 grid gap-3 text-sm">
-                  <DebugRow label="token_id" value={selection.token.id} />
-                  <DebugRow label="tekst" value={selection.token.text} />
-                  <DebugRow label="język" value={selection.token.language} />
-                  <DebugRow label="paragraph_id" value={selection.paragraph.id} />
-                  <DebugRow label="candidate_ids" value={selection.candidateIds.join('\n')} />
-                  <DebugRow label="aktywny kandydat" value={selection.activeCandidate?.id ?? 'brak'} />
-                  <Button variant="default" onClick={saveDebugOverride}>Zapisz szkic poprawki</Button>
-                </div>
-              ) : (
-                <p className="mt-4 text-sm leading-6 text-muted-foreground">Kliknij dowolny token PL albo CS, żeby zobaczyć stabilne ID i najmniejszego kandydata alignmentowego.</p>
-              )}
-            </aside>
+      <main className="reader-view text-foreground" data-testid="reader-screen">
+        <header className="reader-chrome">
+          <div className="min-w-0">
+            <button className="reader-back-link" onClick={() => setView('library')}>
+              Biblioteczka
+            </button>
+            <h1>{work?.title ?? 'Dobry wojak Szwejk'}</h1>
           </div>
-        </div>
+          <div className="reader-controls" aria-label="Ustawienia czytania">
+            {debugMode ? (
+              <span className="debug-pill">
+                <Bug className="h-3.5 w-3.5" />
+                debug
+              </span>
+            ) : null}
+            <Button variant="outline" size="sm" onClick={() => setFontSize((value) => Math.max(15, value - 1))} aria-label="Zmniejsz font">
+              <Minus className="h-4 w-4" />
+            </Button>
+            <label className="font-control">
+              <span>Font</span>
+              <input
+                type="range"
+                min="15"
+                max="24"
+                value={fontSize}
+                onChange={(event) => setFontSize(Number(event.target.value))}
+                aria-label="Wielkość fontu"
+              />
+              <span className="tabular-nums">{fontSize}px</span>
+            </label>
+            <Button variant="outline" size="sm" onClick={() => setFontSize((value) => Math.min(24, value + 1))} aria-label="Zwiększ font">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </header>
+
+        {loadError ? <p className="reader-error">{loadError}</p> : null}
+
+        <section className={cn('reader-stage', debugMode && 'reader-stage-debug')}>
+          <article
+            className="reader-page-frame"
+            aria-label={`Strona ${resolvedPageIndex + 1} z ${pageCount}`}
+            data-testid="reader-page-frame"
+          >
+            <div className="reader-page-head">
+              <span>Tom I</span>
+              <span>{activeChapter?.title?.replace(' - mini fixture', '') ?? 'Rozdział 1'}</span>
+            </div>
+
+            <div className="reader-page-content">
+              {currentPage?.paragraphs.map((paragraph) => (
+                <ReaderParagraph
+                  key={paragraph.id}
+                  paragraph={paragraph}
+                  workId={work?.id ?? 'work-szwejk'}
+                  chapterId={activeChapter?.id ?? 'chapter-001'}
+                  selection={selection}
+                  onTokenClick={handleTokenClick}
+                />
+              ))}
+            </div>
+
+            <ReaderPopover selection={selection} onClose={() => setSelection(null)} />
+
+            <div className="reader-page-foot">
+              <span>{resolvedPageIndex + 1}</span>
+              <span>{pageCount}</span>
+            </div>
+          </article>
+
+          {debugMode ? (
+            <DebugPanel
+              selection={selection}
+              overridesCount={overrides.length}
+              onSaveOverride={saveDebugOverride}
+              onExportOverrides={exportOverrides}
+            />
+          ) : null}
+        </section>
+
+        <nav className="reader-navigation" aria-label="Nawigacja strony">
+          <Button variant="outline" onClick={() => goToPage(resolvedPageIndex - 1)} disabled={!canGoBack} aria-label="Poprzednia strona">
+            <ChevronLeft className="h-4 w-4" />
+            Poprzednia
+          </Button>
+          <span className="reader-page-counter">
+            Strona {resolvedPageIndex + 1} / {pageCount}
+          </span>
+          <Button variant="outline" onClick={() => goToPage(resolvedPageIndex + 1)} disabled={!canGoForward} aria-label="Następna strona">
+            Następna
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </nav>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen px-4 py-6 text-foreground sm:px-6 lg:px-8">
+    <main className="library-view text-foreground">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-6 flex flex-col gap-2 border-b border-border pb-5">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="h-4 w-4" />
-            MVP-0 czytnika hybrydowego PL {'->'} CS
-          </div>
-          <h1 className="text-3xl font-semibold tracking-normal sm:text-4xl">Biblioteczka</h1>
+        <header className="library-header">
+          <p>Hybrydowe wydanie PL {'->'} CS</p>
+          <h1>Biblioteczka</h1>
         </header>
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="rounded-lg border border-border bg-background/88 p-5 shadow-sm">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-              <div className="max-w-2xl">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <BookOpen className="h-6 w-6" />
-                </div>
-                <h2 className="text-2xl font-semibold">Dobry wojak Szwejk</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Pierwszy techniczny podgląd czytnika na małym fixture z rozdziału 1. Dane pochodzą ze strukturalnego artefaktu alignmentowego, nie z PDF.
-                </p>
-              </div>
-              <Button onClick={openReader} disabled={!fixture || !activeChapter}>
-                <BookOpen className="h-4 w-4" />
-                Czytaj Tom I
-              </Button>
-            </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {volumes.map((volume) => (
-                <VolumeTile key={volume.id} volume={volume} />
-              ))}
-            </div>
-            {loadError ? <p className="mt-4 rounded-md border border-border bg-muted p-3 text-sm">{loadError}</p> : null}
+        <section className="library-book">
+          <div className="library-cover" aria-hidden="true">
+            <BookOpen className="h-10 w-10" />
           </div>
-
-          <aside className="rounded-lg border border-border bg-background/88 p-5 shadow-sm">
-            <h2 className="text-base font-semibold">Stan MVP-0</h2>
-            <ul className="mt-3 grid gap-2 text-sm leading-6 text-muted-foreground">
-              <li>Fixture: chapter_001 checkpoint {'->'} reader-fixture</li>
-              <li>Stabilne atrybuty DOM dla tokenów i segmentów</li>
-              <li>Lokalna telemetryka w buforze localStorage</li>
-              <li>Eksport override’ów jako JSON</li>
-            </ul>
-          </aside>
+          <div className="library-copy">
+            <h2>Dobry wojak Szwejk</h2>
+            <p>Publiczny czytnik tomu I. Kliknij słowo w tekście, żeby zobaczyć równoległy odpowiednik w języku czeskim.</p>
+            {loadError ? <p className="reader-error">{loadError}</p> : null}
+            <Button onClick={openReader} disabled={!fixture || !activeChapter}>
+              <BookOpen className="h-4 w-4" />
+              Czytaj Tom I
+            </Button>
+          </div>
+          <div className="volume-grid">
+            {volumes.map((volume) => (
+              <VolumeTile key={volume.id} volume={volume} />
+            ))}
+          </div>
         </section>
       </div>
     </main>
   )
 }
 
+function ReaderParagraph({
+  paragraph,
+  workId,
+  chapterId,
+  selection,
+  onTokenClick,
+}: {
+  paragraph: Paragraph
+  workId: string
+  chapterId: string
+  selection: TokenSelection | null
+  onTokenClick: (paragraph: Paragraph, segmentId: string, token: Token) => void
+}) {
+  const segment = getSourceSegment(paragraph)
+  if (!segment) return null
+
+  return (
+    <p
+      className="reader-paragraph"
+      lang={segment.language}
+      data-work-id={workId}
+      data-volume-id={FIXTURE_VOLUME_ID}
+      data-chapter-id={chapterId}
+      data-paragraph-id={paragraph.id}
+      data-segment-id={segment.id}
+      data-candidate-ids={segment.candidateIds.join(' ')}
+    >
+      {segment.tokens.map((token) => {
+        const activeRange = selection?.activeCandidate?.sourceTokenIds.includes(token.id) || selection?.activeCandidate?.tokenIds.includes(token.id)
+        const clicked = selection?.token.id === token.id
+        return (
+          <span key={token.id}>
+            <span
+              role="button"
+              tabIndex={0}
+              data-testid="reader-token"
+              className={cn('reader-token', activeRange && 'reader-token-active', clicked && 'reader-token-clicked')}
+              onClick={() => onTokenClick(paragraph, segment.id, token)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  onTokenClick(paragraph, segment.id, token)
+                }
+              }}
+              data-work-id={workId}
+              data-volume-id={FIXTURE_VOLUME_ID}
+              data-chapter-id={chapterId}
+              data-paragraph-id={paragraph.id}
+              data-segment-id={segment.id}
+              data-token-id={token.id}
+              data-candidate-ids={token.candidateIds.join(' ')}
+            >
+              {token.text}
+            </span>{' '}
+          </span>
+        )
+      })}
+    </p>
+  )
+}
+
+function ReaderPopover({ selection, onClose }: { selection: TokenSelection | null; onClose: () => void }) {
+  if (!selection) return null
+  const candidate = selection.activeCandidate
+  const counterpart = selection.token.language === 'pl' ? candidate?.targetText : candidate?.sourceText
+  const label = selection.token.language === 'pl' ? 'Czeski odpowiednik' : 'Polski odpowiednik'
+
+  return (
+    <aside className="reader-popover" role="dialog" aria-label="Odpowiednik">
+      <div>
+        <p>{label}</p>
+        <button type="button" aria-label="Zamknij odpowiednik" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <blockquote lang={selection.token.language === 'pl' ? 'cs' : 'pl'}>{counterpart || 'Brak jednoznacznego odpowiednika dla tego słowa.'}</blockquote>
+    </aside>
+  )
+}
+
+function DebugPanel({
+  selection,
+  overridesCount,
+  onSaveOverride,
+  onExportOverrides,
+}: {
+  selection: TokenSelection | null
+  overridesCount: number
+  onSaveOverride: () => void
+  onExportOverrides: () => void
+}) {
+  return (
+    <aside className="debug-panel">
+      <div className="flex items-center justify-between gap-3">
+        <h2>Token debug</h2>
+        <span>{overridesCount} override</span>
+      </div>
+      {selection ? (
+        <div className="mt-4 grid gap-3 text-sm">
+          <DebugRow label="token_id" value={selection.token.id} />
+          <DebugRow label="tekst" value={selection.token.text} />
+          <DebugRow label="język" value={selection.token.language} />
+          <DebugRow label="paragraph_id" value={selection.paragraph.id} />
+          <DebugRow label="candidate_ids" value={selection.candidateIds.join('\n')} />
+          <DebugRow label="aktywny kandydat" value={selection.activeCandidate?.id ?? 'brak'} />
+          <Button variant="default" onClick={onSaveOverride}>Zapisz szkic poprawki</Button>
+          <Button variant="secondary" onClick={onExportOverrides}>
+            <Download className="h-4 w-4" />
+            Pobierz moje poprawki JSON
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-3">
+          <p>Kliknij token, żeby zobaczyć stabilne ID i najmniejszego kandydata alignmentowego.</p>
+          <Button variant="secondary" onClick={onExportOverrides}>
+            <Download className="h-4 w-4" />
+            Pobierz moje poprawki JSON
+          </Button>
+        </div>
+      )}
+    </aside>
+  )
+}
+
 function VolumeTile({ volume }: { volume: Volume }) {
   const locked = volume.status !== 'available'
   return (
-    <div className="rounded-md border border-border bg-muted/45 p-3">
+    <div className="volume-tile">
       <div className="flex items-center justify-between gap-2">
-        <p className="font-medium">{volume.label}</p>
-        {locked ? <Lock className="h-4 w-4 text-muted-foreground" /> : <span className="rounded-sm bg-secondary px-2 py-1 text-xs text-secondary-foreground">darmowy</span>}
+        <p>{volume.label}</p>
+        {locked ? <Lock className="h-4 w-4 text-muted-foreground" /> : <span>darmowy</span>}
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">{volume.status === 'available' ? 'aktywny' : volume.status === 'locked' ? 'zablokowany' : 'wkrótce'}</p>
+      <small>{volume.status === 'available' ? 'aktywny' : volume.status === 'locked' ? 'zablokowany' : 'wkrótce'}</small>
     </div>
   )
 }
@@ -368,8 +571,8 @@ function VolumeTile({ volume }: { volume: Volume }) {
 function DebugRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
-      <dd className="mt-1 max-h-28 overflow-auto rounded-md bg-muted p-2 font-mono text-xs leading-5 text-foreground break-all whitespace-pre-wrap">{value}</dd>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
     </div>
   )
 }
