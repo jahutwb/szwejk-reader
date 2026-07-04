@@ -73,6 +73,17 @@ function validateChapter(value: unknown, path: string, errors: string[]): value 
   }
   if (!isNonEmptyString(value.id)) errors.push(`${path}.id is required`)
   if (!isNonEmptyString(value.title)) errors.push(`${path}.title is required`)
+  if (value.titlePl !== undefined && typeof value.titlePl !== 'string') errors.push(`${path}.titlePl must be a string`)
+  if (value.titleCs !== undefined && typeof value.titleCs !== 'string') errors.push(`${path}.titleCs must be a string`)
+  if (value.targetExposure !== undefined && typeof value.targetExposure !== 'number') errors.push(`${path}.targetExposure must be a number`)
+  if (value.titleSizesPt !== undefined) {
+    if (!isRecord(value.titleSizesPt)) {
+      errors.push(`${path}.titleSizesPt must be an object`)
+    } else {
+      if (!isNonEmptyString(value.titleSizesPt.pl)) errors.push(`${path}.titleSizesPt.pl is required`)
+      if (!isNonEmptyString(value.titleSizesPt.cs)) errors.push(`${path}.titleSizesPt.cs is required`)
+    }
+  }
   if (!Array.isArray(value.paragraphs)) {
     errors.push(`${path}.paragraphs must be an array`)
   } else {

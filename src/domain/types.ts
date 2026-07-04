@@ -33,6 +33,13 @@ export interface Volume {
 export interface Chapter {
   id: string
   title: string
+  titlePl?: string
+  titleCs?: string
+  targetExposure?: number
+  titleSizesPt?: {
+    pl: string
+    cs: string
+  }
   paragraphs: Paragraph[]
   candidates: Candidate[]
   footnotes: Footnote[]

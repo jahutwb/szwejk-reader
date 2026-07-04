@@ -93,7 +93,7 @@ describe('App', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
 
-    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('93')
+    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('96')
   })
 
   it('loads the whole first volume from v13 plan and full hierarchical alignment artifacts', () => {
@@ -124,6 +124,32 @@ describe('App', () => {
     ])
     expect(paragraphCount).toBeGreaterThan(800)
     expect(candidateCount).toBeGreaterThan(12_000)
+  })
+
+  it('carries bilingual adaptive chapter title metadata from hybrydyzer artifacts', () => {
+    const secondChapter = readerFixture.work.volumes[0].chapters[1]
+
+    expect(secondChapter.title).toBe('Jak dobry wojak Szwejk wkroczył na widownię wojny światowej')
+    expect(secondChapter.titlePl).toBe('Jak dobry wojak Szwejk wkroczył na widownię wojny światowej')
+    expect(secondChapter.titleCs).toBe('Zasáhnutí dobrého vojáka Švejka do světové války')
+    expect(secondChapter.targetExposure).toBeGreaterThan(0)
+    expect(secondChapter.titleSizesPt?.pl).toMatch(/pt$/)
+    expect(secondChapter.titleSizesPt?.cs).toMatch(/pt$/)
+  })
+
+  it('renders bilingual adaptive chapter titles on chapter opening pages', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+
+    const pageFrame = await screen.findByTestId('reader-page-frame')
+    expect(within(pageFrame).getByRole('heading', { name: /wstęp úvod/i })).toBeInTheDocument()
+    expect(pageFrame.querySelector('.chapter-title-pl')).toHaveTextContent('Wstęp')
+    expect(pageFrame.querySelector('.chapter-title-cs')).toHaveTextContent('Úvod')
+
+    await user.click(screen.getByRole('button', { name: /następna strona/i }))
+
+    expect(within(pageFrame).queryByRole('heading', { name: /wstęp úvod/i })).not.toBeInTheDocument()
   })
 
   it('contains intro annotations, footnotes, and hierarchical candidate memberships from source artifacts', () => {

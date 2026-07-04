@@ -28,6 +28,7 @@ type ReaderPage = {
   id: string
   chapterId: string
   chapterTitle: string
+  isChapterOpening: boolean
   blocks: ReaderPageBlock[]
   footnotes: Footnote[]
 }
@@ -53,6 +54,7 @@ const PROGRESS_KEY = 'szwejk-reader.progress'
 const OVERRIDES_KEY = 'szwejk-reader.overrides'
 const PAGE_CHAR_CAPACITY = 1650
 const MIN_TRAILING_PAGE_CHARS = 260
+const CHAPTER_TITLE_CHAR_COST = 360
 
 const defaultVolumes: Volume[] = [
   { id: 'volume-1', label: 'Tom I', status: 'available', chapters: [] },
@@ -158,15 +160,17 @@ function buildReaderPages(chapters: Chapter[]): ReaderPage[] {
   const pages: ReaderPage[] = []
   for (const chapter of chapters) {
     let current: ReaderPageBlock[] = []
-    let currentLength = 0
+    let currentLength = CHAPTER_TITLE_CHAR_COST
     let pageIndexInChapter = 1
 
     const pushPage = () => {
       if (current.length === 0) return
+      const nextPageIndex = pageIndexInChapter
       pages.push({
-        id: `${chapter.id}-page-${pageIndexInChapter}`,
+        id: `${chapter.id}-page-${nextPageIndex}`,
         chapterId: chapter.id,
         chapterTitle: chapter.title,
+        isChapterOpening: nextPageIndex === 1,
         blocks: current,
         footnotes: collectPageFootnotes(chapter, current),
       })
@@ -492,6 +496,7 @@ function App() {
             </div>
 
             <div className="reader-page-content">
+              {currentPage?.isChapterOpening ? <ChapterTitle chapter={chapterById.get(currentPage.chapterId)} /> : null}
               {currentPage
                 ? currentPage.blocks.map((block) => (
                     <ReaderParagraph
@@ -569,6 +574,25 @@ function App() {
         </section>
       </div>
     </main>
+  )
+}
+
+function ChapterTitle({ chapter }: { chapter?: Chapter }) {
+  if (!chapter) return null
+  const titlePl = chapter.titlePl || chapter.title
+  const titleCs = chapter.titleCs || titlePl
+  const plStyle = chapter.titleSizesPt?.pl ? ({ fontSize: chapter.titleSizesPt.pl } satisfies CSSProperties) : undefined
+  const csStyle = chapter.titleSizesPt?.cs ? ({ fontSize: chapter.titleSizesPt.cs } satisfies CSSProperties) : undefined
+
+  return (
+    <h2 className="chapter-title" aria-label={`${titlePl} ${titleCs}`}>
+      <span className="chapter-title-pl" style={plStyle}>
+        {titlePl}
+      </span>
+      <span className="chapter-title-cs" lang="cs" style={csStyle}>
+        {titleCs}
+      </span>
+    </h2>
   )
 }
 

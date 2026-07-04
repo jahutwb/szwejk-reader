@@ -30,6 +30,10 @@ NOTES_SOURCE = Path(
     'notes_glossary_plan.fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_hybridization_v13_risky_editorial_v1_'
     'render_notesfix_glossary_v1.json'
 )
+TARGET_SNAPSHOT_SOURCE = Path(
+    '/home/jahu/PycharmProjects/hybrydyzer/data/artifacts/experiments/'
+    'fullbook_consistent6_boundary_both_v1/ingest/target/parsed_corpus_snapshot.full.json'
+)
 OUT_DIR = Path('/home/jahu/PycharmProjects/szwejk-reader/public/data/fixtures/szwejk-mini')
 
 VOLUME_1_CHAPTERS = tuple(range(1, 18))
@@ -52,6 +56,8 @@ CHAPTER_TITLES_PL = {
     16: 'Katastrofa',
     17: 'Epilog',
 }
+BASE_CHAPTER_TITLE_SIZE_PT = 22.0
+MIN_TITLE_SIZE_PT = 8.0
 
 TOKEN_RE = re.compile(r'\w+|[^\w\s]', re.UNICODE)
 PARAGRAPH_ID_RE = re.compile(r'(.+-ch-\d+-p-\d+)')
@@ -102,6 +108,18 @@ def chapter_id(chapter_number: int) -> str:
     return f'chapter-{chapter_number:03d}'
 
 
+def format_pt(size: float) -> str:
+    return f'{size:.2f}pt'
+
+
+def adaptive_title_sizes(exposure: float) -> dict[str, str]:
+    clamped = min(max(exposure, 0.0), 1.0)
+    return {
+        'pl': format_pt(max(MIN_TITLE_SIZE_PT, BASE_CHAPTER_TITLE_SIZE_PT * (1.0 - clamped))),
+        'cs': format_pt(max(MIN_TITLE_SIZE_PT, BASE_CHAPTER_TITLE_SIZE_PT * clamped)),
+    }
+
+
 def build_execution_unit_id(source_unit_ids: list[str]) -> str:
     if len(source_unit_ids) == 1:
         return source_unit_ids[0]
@@ -129,6 +147,51 @@ def chapter_number_from_candidate(candidate: dict[str, Any]) -> int | None:
             if chapter is not None:
                 return chapter
     return None
+
+
+def load_target_chapter_titles() -> dict[int, str]:
+    target_snapshot = json.loads(TARGET_SNAPSHOT_SOURCE.read_text(encoding='utf-8'))
+    titles: dict[int, str] = {}
+    for chapter in target_snapshot.get('chapters') or []:
+        index = chapter.get('index')
+        title = chapter.get('title_cs') or chapter.get('title')
+        if isinstance(index, int) and isinstance(title, str) and title.strip():
+            titles[index] = title
+    return titles
+
+
+def chapter_local_exposure_by_number(alignment: dict[str, Any], plan: dict[str, Any]) -> dict[int, float]:
+    total_by_chapter: dict[int, int] = {}
+    for chapter_alignment in alignment.get('chapter_alignments') or []:
+        chapter_number = chapter_number_from_text(chapter_alignment.get('source_parent_unit_id'))
+        if chapter_number is None:
+            continue
+        total_by_chapter[chapter_number] = sum(
+            max(span_start_end(candidate, 'source_span')[1] - span_start_end(candidate, 'source_span')[0], 1)
+            for candidate in chapter_alignment.get('candidates') or []
+        )
+
+    covered_by_chapter: dict[int, set[str | int]] = {}
+    for candidate in plan.get('selected_candidates') or []:
+        chapter_number = chapter_number_from_candidate(candidate)
+        if chapter_number is None:
+            continue
+        covered_by_chapter.setdefault(chapter_number, set()).update(candidate.get('covered_source_positions') or [])
+
+    cumulative_fallback: dict[int, float] = {}
+    for decision in plan.get('unit_decisions') or []:
+        chapter_number = chapter_number_from_candidate(decision)
+        if chapter_number is not None and isinstance(decision.get('H_after'), (int, float)):
+            cumulative_fallback[chapter_number] = float(decision['H_after'])
+
+    exposure_by_number: dict[int, float] = {}
+    for chapter_number, total in total_by_chapter.items():
+        covered = len(covered_by_chapter.get(chapter_number, set()))
+        if total > 0 and covered > 0:
+            exposure_by_number[chapter_number] = min(1.0, covered / total)
+        elif chapter_number in cumulative_fallback:
+            exposure_by_number[chapter_number] = cumulative_fallback[chapter_number]
+    return exposure_by_number
 
 
 def paragraph_id_from_unit(unit_id: str | None, fallback: str) -> str:
@@ -602,6 +665,8 @@ def build_chapter(
     intros_by_candidate: dict[str, list[dict[str, Any]]],
     notes_by_intro: dict[str, dict[str, Any]],
     glossary_by_intro: dict[str, dict[str, Any]],
+    target_titles_by_number: dict[int, str],
+    exposure_by_number: dict[int, float],
     chapter_number: int,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     paragraphs: list[ParagraphBuilder] = []
@@ -725,9 +790,16 @@ def build_chapter(
     candidates_out = [candidate_to_json(record) for record in candidate_records.values()]
     candidates_out.sort(key=lambda item: (item['sourceStart'], item['sourceEnd'], item['depth'], item['id']))
 
+    target_exposure = exposure_by_number.get(chapter_number, 0.0)
+    title_pl = CHAPTER_TITLES_PL[chapter_number]
+    title_cs = target_titles_by_number.get(chapter_number, title_pl)
     chapter = {
         'id': chapter_id(chapter_number),
-        'title': CHAPTER_TITLES_PL[chapter_number],
+        'title': title_pl,
+        'titlePl': title_pl,
+        'titleCs': title_cs,
+        'targetExposure': target_exposure,
+        'titleSizesPt': adaptive_title_sizes(target_exposure),
         'paragraphs': paragraphs_out,
         'candidates': candidates_out,
         'footnotes': footnotes_out,
@@ -736,6 +808,7 @@ def build_chapter(
     stats = {
         'chapterId': chapter['id'],
         'sourceArtifactId': chapter_alignment['artifact_id'],
+        'targetExposure': target_exposure,
         'selectedCandidateCount': sum(len(items) for unit_id, items in selected_by_unit.items() if f'-ch-{chapter_number:03d}' in unit_id),
         'paragraphCount': len(paragraphs_out),
         'candidateCount': len(candidates_out),
@@ -755,6 +828,8 @@ def build_fixture() -> dict[str, Any]:
     alignment = json.loads(ALIGNMENT_SOURCE.read_text(encoding='utf-8'))
     plan = json.loads(PLAN_SOURCE.read_text(encoding='utf-8'))
     notes_plan = json.loads(NOTES_SOURCE.read_text(encoding='utf-8'))
+    target_titles_by_number = load_target_chapter_titles()
+    exposure_by_number = chapter_local_exposure_by_number(alignment, plan)
 
     selected_by_id = {candidate['candidate_id']: candidate for candidate in plan.get('selected_candidates') or []}
     selected_by_unit: dict[str, list[dict[str, Any]]] = {}
@@ -811,6 +886,8 @@ def build_fixture() -> dict[str, Any]:
             intros_by_candidate=intros_by_candidate,
             notes_by_intro=notes_by_intro,
             glossary_by_intro=glossary_by_intro,
+            target_titles_by_number=target_titles_by_number,
+            exposure_by_number=exposure_by_number,
             chapter_number=chapter_number,
         )
         chapters.append(chapter)
@@ -824,6 +901,7 @@ def build_fixture() -> dict[str, Any]:
             'sourceArtifactPath': str(ALIGNMENT_SOURCE),
             'hybridizationPlanPath': str(PLAN_SOURCE),
             'notesGlossaryPlanPath': str(NOTES_SOURCE),
+            'targetSnapshotPath': str(TARGET_SNAPSHOT_SOURCE),
             'sourceArtifactId': alignment.get('artifact_id'),
             'hybridizationPlanAlignmentArtifactId': plan.get('metadata', {}).get('alignment_artifact_id'),
             'generatedAt': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),

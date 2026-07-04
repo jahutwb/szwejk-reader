@@ -364,6 +364,31 @@ input {
   padding: 0 var(--reader-margin-right) 0 var(--reader-margin-left);
 }
 
+.chapter-title {
+  margin: 0 0 1.5em;
+  color: hsl(220 18% 13%);
+  text-align: center;
+}
+
+.chapter-title-pl,
+.chapter-title-cs {
+  display: block;
+  line-height: 1;
+}
+
+.chapter-title-pl {
+  font-family: var(--reader-source-font);
+  font-weight: 700;
+}
+
+.chapter-title-cs {
+  margin-top: 0.25em;
+  color: #3a3a3a;
+  font-family: var(--reader-target-font);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
 .reader-paragraph {
   margin: 0;
   color: hsl(220 18% 13%);
