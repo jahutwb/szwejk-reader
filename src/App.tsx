@@ -51,8 +51,8 @@ type ReaderProgress = {
 const FIXTURE_VOLUME_ID = 'volume-1'
 const PROGRESS_KEY = 'szwejk-reader.progress'
 const OVERRIDES_KEY = 'szwejk-reader.overrides'
-const PAGE_CHAR_CAPACITY = 2450
-const MIN_TRAILING_PAGE_CHARS = 360
+const PAGE_CHAR_CAPACITY = 1650
+const MIN_TRAILING_PAGE_CHARS = 260
 
 const defaultVolumes: Volume[] = [
   { id: 'volume-1', label: 'Tom I', status: 'available', chapters: [] },

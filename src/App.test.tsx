@@ -77,7 +77,7 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /spis treści: szwejk w garnizonie/i })).toBeInTheDocument()
   })
 
-  it('keeps page 66 reachable when progress points at a paragraph slice', async () => {
+  it('keeps a sliced paragraph page reachable when progress points at a segment slice', async () => {
     localStorage.setItem(
       'szwejk-reader.progress',
       JSON.stringify({
@@ -93,7 +93,7 @@ describe('App', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
 
-    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('66')
+    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('93')
   })
 
   it('loads the whole first volume from v13 plan and full hierarchical alignment artifacts', () => {

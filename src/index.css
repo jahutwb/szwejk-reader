@@ -13,9 +13,14 @@
   --border: 38 19% 78%;
   --input: 38 19% 78%;
   --ring: 214 44% 24%;
-  --reader-font-size: 18px;
-  --reader-line-height: 1.38;
-  --reader-page-width: 52rem;
+  --reader-font-size: clamp(14px, 3.01cqw, 18px);
+  --reader-line-height: 1.16;
+  --reader-page-width: 129mm;
+  --reader-page-height: 198mm;
+  --reader-margin-left: 15.5039%;
+  --reader-margin-right: 11.6279%;
+  --reader-margin-top: 9.0909%;
+  --reader-margin-bottom: 12.6263%;
   --reader-source-font: "TeX Gyre Pagella", Georgia, "Times New Roman", serif;
   --reader-target-font: "TeX Gyre Heros", Arial, Helvetica, sans-serif;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -179,7 +184,7 @@ input {
   min-height: 32rem;
   grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
-  padding: clamp(0.35rem, 1vw, 0.7rem);
+  padding: 0.35rem;
 }
 
 .debug-pill {
@@ -198,7 +203,7 @@ input {
   display: flex;
   min-height: 0;
   height: 100%;
-  align-items: stretch;
+  align-items: center;
   justify-content: center;
   gap: 1rem;
 }
@@ -211,8 +216,12 @@ input {
 .reader-page-frame {
   position: relative;
   display: flex;
-  width: min(var(--reader-page-width), calc(100vw - 2rem));
-  height: 100%;
+  width: auto;
+  height: calc(100svh - 0.7rem);
+  max-width: calc(100vw - 0.7rem);
+  max-height: calc(100svh - 0.7rem);
+  aspect-ratio: 129 / 198;
+  container-type: inline-size;
   min-width: 0;
   flex-direction: column;
   overflow: hidden;
@@ -237,9 +246,10 @@ input {
 
 .reader-page-head {
   position: relative;
-  min-height: 2.15rem;
-  border-bottom: 1px solid hsl(38 20% 84%);
-  padding: 0 1rem;
+  flex: 0 0 var(--reader-margin-top);
+  min-height: 0;
+  border-bottom: 0;
+  padding: 0 var(--reader-margin-right) 0 var(--reader-margin-left);
 }
 
 .reader-breadcrumb {
@@ -327,9 +337,10 @@ input {
 }
 
 .reader-page-foot {
-  min-height: 2.35rem;
-  border-top: 1px solid hsl(38 20% 84%);
-  padding: 0 0.85rem;
+  flex: 0 0 var(--reader-margin-bottom);
+  min-height: 0;
+  border-top: 0;
+  padding: 0 var(--reader-margin-right) 0 var(--reader-margin-left);
 }
 
 .reader-page-foot button {
@@ -350,7 +361,7 @@ input {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  padding: clamp(0.85rem, 2.4vh, 1.45rem) clamp(1.15rem, 5vw, 3.25rem) 0.45rem;
+  padding: 0 var(--reader-margin-right) 0 var(--reader-margin-left);
 }
 
 .reader-paragraph {
@@ -389,10 +400,12 @@ input {
 .reader-page-notes {
   margin: 0;
   border-top: 1px solid hsl(38 20% 84%);
-  padding: 0.45rem clamp(1.35rem, 6vw, 3.9rem) 0.35rem;
+  max-height: 22%;
+  overflow: hidden;
+  padding: 0.35rem var(--reader-margin-right) 0.2rem var(--reader-margin-left);
   color: hsl(220 16% 25%);
   font-family: var(--reader-source-font);
-  font-size: 0.74rem;
+  font-size: clamp(10px, 2.15cqw, 13px);
   line-height: 1.22;
   list-style: none;
 }
@@ -578,11 +591,13 @@ input {
 
   .reader-page-frame {
     width: calc(100vw - 0.6rem);
+    height: auto;
+    max-height: calc(100svh - 0.6rem);
   }
 
   .reader-page-head {
-    min-height: 2rem;
-    padding-inline: 0.75rem;
+    padding-left: 0.8rem;
+    padding-right: 0.65rem;
   }
 
   .reader-breadcrumb {
@@ -599,7 +614,8 @@ input {
   }
 
   .reader-page-content {
-    padding: 0.8rem 0.9rem 0.4rem;
+    padding-left: 0.8rem;
+    padding-right: 0.65rem;
   }
 
   .reader-paragraph {
@@ -612,8 +628,8 @@ input {
   }
 
   .reader-page-foot {
-    min-height: 2.25rem;
-    padding-inline: 0.55rem;
+    padding-left: 0.65rem;
+    padding-right: 0.55rem;
   }
 
   .reader-page-foot button {
