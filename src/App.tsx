@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { BookOpen, Bug, ChevronLeft, ChevronRight, Download, Lock, Minus, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { loadMiniFixture } from '@/data/fixture'
 import { findSmallestCandidateForToken } from '@/domain/selection'
+import { splitTokenTextParts } from '@/domain/textSegments'
 import type { Candidate, Chapter, Paragraph, ReaderFixture, ReaderOverride, Token, Volume } from '@/domain/types'
 import { logCorrectionEvent, logWordClick, submitOverrides } from '@/telemetry/telemetry'
 import { cn } from '@/lib/utils'
@@ -15,6 +16,10 @@ type TokenSelection = {
   segmentId: string
   candidateIds: string[]
   activeCandidate?: Candidate
+  anchor?: {
+    x: number
+    y: number
+  }
 }
 
 type ReaderPage = {
@@ -76,13 +81,13 @@ function getFirstAvailableChapter(fixture: ReaderFixture | null): Chapter | unde
   return fixture?.work.volumes.find((volume) => volume.id === FIXTURE_VOLUME_ID)?.chapters[0]
 }
 
-function getSourceSegment(paragraph: Paragraph) {
-  return paragraph.segments.find((segment) => segment.language === 'pl') ?? paragraph.segments[0]
+function getReaderSegment(paragraph: Paragraph) {
+  return paragraph.segments.find((segment) => segment.language === 'hybrid') ?? paragraph.segments.find((segment) => segment.language === 'pl') ?? paragraph.segments[0]
 }
 
 function estimateParagraphLength(paragraph: Paragraph): number {
-  const sourceSegment = getSourceSegment(paragraph)
-  return sourceSegment?.text.length ?? 0
+  const readerSegment = getReaderSegment(paragraph)
+  return readerSegment?.text.length ?? 0
 }
 
 function getApproxPageCapacity(fontSize: number): number {
@@ -203,7 +208,7 @@ function App() {
       const boundedIndex = Math.min(Math.max(nextIndex, 0), pages.length - 1)
       const nextPage = pages[boundedIndex]
       const firstParagraph = nextPage.paragraphs[0]
-      const firstSegment = firstParagraph ? getSourceSegment(firstParagraph) : undefined
+      const firstSegment = firstParagraph ? getReaderSegment(firstParagraph) : undefined
       setCurrentPageIndex(boundedIndex)
       setSelection(null)
       if (firstParagraph) {
@@ -232,7 +237,7 @@ function App() {
     setView('reader')
   }
 
-  function handleTokenClick(paragraph: Paragraph, segmentId: string, token: Token) {
+  function handleTokenClick(paragraph: Paragraph, segmentId: string, token: Token, anchor?: DOMRect) {
     const chapter = activeChapter
     if (!chapter) return
     const activeCandidate = findSmallestCandidateForToken(chapter.candidates, token.id)
@@ -242,6 +247,12 @@ function App() {
       segmentId,
       candidateIds: token.candidateIds,
       activeCandidate,
+      anchor: anchor
+        ? {
+            x: Math.min(Math.max(anchor.left + anchor.width / 2, 144), window.innerWidth - 144),
+            y: Math.max(anchor.top, 72),
+          }
+        : undefined,
     }
     setSelection(nextSelection)
     writeProgress({
@@ -413,7 +424,7 @@ function App() {
           </div>
           <div className="library-copy">
             <h2>Dobry wojak Szwejk</h2>
-            <p>Publiczny czytnik tomu I. Kliknij słowo w tekście, żeby zobaczyć równoległy odpowiednik w języku czeskim.</p>
+            <p>Publiczny czytnik tomu I. Kliknij słowo w tekście, żeby zobaczyć równoległy fragment zaraz przy zaznaczeniu.</p>
             {loadError ? <p className="reader-error">{loadError}</p> : null}
             <Button onClick={openReader} disabled={!fixture || !activeChapter}>
               <BookOpen className="h-4 w-4" />
@@ -442,10 +453,11 @@ function ReaderParagraph({
   workId: string
   chapterId: string
   selection: TokenSelection | null
-  onTokenClick: (paragraph: Paragraph, segmentId: string, token: Token) => void
+  onTokenClick: (paragraph: Paragraph, segmentId: string, token: Token, anchor?: DOMRect) => void
 }) {
-  const segment = getSourceSegment(paragraph)
+  const segment = getReaderSegment(paragraph)
   if (!segment) return null
+  const parts = splitTokenTextParts(segment)
 
   return (
     <p
@@ -458,33 +470,37 @@ function ReaderParagraph({
       data-segment-id={segment.id}
       data-candidate-ids={segment.candidateIds.join(' ')}
     >
-      {segment.tokens.map((token) => {
-        const activeRange = selection?.activeCandidate?.sourceTokenIds.includes(token.id) || selection?.activeCandidate?.tokenIds.includes(token.id)
+      {parts.map((part) => {
+        if (part.kind === 'text') {
+          return <span key={part.key}>{part.text}</span>
+        }
+        const token = part.token
+        const activeRange = selection?.activeCandidate?.tokenIds.includes(token.id)
         const clicked = selection?.token.id === token.id
         return (
-          <span key={token.id}>
-            <span
-              role="button"
-              tabIndex={0}
-              data-testid="reader-token"
-              className={cn('reader-token', activeRange && 'reader-token-active', clicked && 'reader-token-clicked')}
-              onClick={() => onTokenClick(paragraph, segment.id, token)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  onTokenClick(paragraph, segment.id, token)
-                }
-              }}
-              data-work-id={workId}
-              data-volume-id={FIXTURE_VOLUME_ID}
-              data-chapter-id={chapterId}
-              data-paragraph-id={paragraph.id}
-              data-segment-id={segment.id}
-              data-token-id={token.id}
-              data-candidate-ids={token.candidateIds.join(' ')}
-            >
-              {token.text}
-            </span>{' '}
+          <span
+            key={part.key}
+            role="button"
+            tabIndex={0}
+            data-testid="reader-token"
+            className={cn('reader-token', token.language === 'cs' && 'reader-token-target', activeRange && 'reader-token-active', clicked && 'reader-token-clicked')}
+            onClick={(event) => onTokenClick(paragraph, segment.id, token, event.currentTarget.getBoundingClientRect())}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onTokenClick(paragraph, segment.id, token, event.currentTarget.getBoundingClientRect())
+              }
+            }}
+            data-work-id={workId}
+            data-volume-id={FIXTURE_VOLUME_ID}
+            data-chapter-id={chapterId}
+            data-paragraph-id={paragraph.id}
+            data-segment-id={segment.id}
+            data-token-id={token.id}
+            data-candidate-ids={token.candidateIds.join(' ')}
+            lang={token.language === 'cs' ? 'cs' : undefined}
+          >
+            {part.text}
           </span>
         )
       })}
@@ -496,12 +512,16 @@ function ReaderPopover({ selection, onClose }: { selection: TokenSelection | nul
   if (!selection) return null
   const candidate = selection.activeCandidate
   const counterpart = selection.token.language === 'pl' ? candidate?.targetText : candidate?.sourceText
-  const label = selection.token.language === 'pl' ? 'Czeski odpowiednik' : 'Polski odpowiednik'
+  const style = selection.anchor
+    ? ({
+        left: `${selection.anchor.x}px`,
+        top: `${selection.anchor.y}px`,
+      } satisfies CSSProperties)
+    : undefined
 
   return (
-    <aside className="reader-popover" role="dialog" aria-label="Odpowiednik">
-      <div>
-        <p>{label}</p>
+    <aside className="reader-popover" role="dialog" aria-label="Równoległy tekst" style={style}>
+      <div className="reader-popover-actions">
         <button type="button" aria-label="Zamknij odpowiednik" onClick={onClose}>
           <X className="h-4 w-4" />
         </button>
