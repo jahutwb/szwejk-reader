@@ -248,6 +248,7 @@ function App() {
   const [overrides, setOverrides] = useState<ReaderOverride[]>(() => readOverrides())
   const [currentLocation, setCurrentLocation] = useState<ReaderProgress | null>(() => readProgress())
   const [currentPageIndex, setCurrentPageIndex] = useState(0)
+  const [tocOpen, setTocOpen] = useState(false)
 
   const debugMode = useMemo(() => getDebugMode(), [])
   const work = fixture?.work
@@ -258,13 +259,18 @@ function App() {
   const pages = useMemo(() => buildReaderPages(availableChapters), [availableChapters])
   const resolvedPageIndex = useMemo(() => {
     if (pages.length === 0) return 0
+    const segmentId = currentLocation?.segmentId
+    if (segmentId) {
+      const indexFromSegment = pages.findIndex((page) => page.blocks.some((block) => getReaderSegment(block.paragraph)?.id === segmentId))
+      if (indexFromSegment >= 0) return indexFromSegment
+    }
     const paragraphId = currentLocation?.paragraphId
     if (paragraphId) {
       const indexFromLocation = pages.findIndex((page) => page.blocks.some((block) => block.paragraph.id === paragraphId))
       if (indexFromLocation >= 0) return indexFromLocation
     }
     return Math.min(currentPageIndex, pages.length - 1)
-  }, [currentLocation?.paragraphId, currentPageIndex, pages])
+  }, [currentLocation?.paragraphId, currentLocation?.segmentId, currentPageIndex, pages])
   const currentPage = pages[resolvedPageIndex]
   const pageCount = Math.max(pages.length, 1)
 
@@ -308,6 +314,7 @@ function App() {
       const firstSegment = firstParagraph ? getReaderSegment(firstParagraph) : undefined
       setCurrentPageIndex(boundedIndex)
       setSelection(null)
+      setTocOpen(false)
       if (firstParagraph) {
         writeProgress({
           chapterId: nextPage.chapterId,
@@ -320,16 +327,29 @@ function App() {
     [pages, writeProgress],
   )
 
+  const goToChapter = useCallback(
+    (chapterId: string) => {
+      const nextIndex = pages.findIndex((page) => page.chapterId === chapterId)
+      if (nextIndex >= 0) goToPage(nextIndex)
+    },
+    [goToPage, pages],
+  )
+
+  const closeReaderOverlays = useCallback(() => {
+    setSelection(null)
+    setTocOpen(false)
+  }, [])
+
   useEffect(() => {
     if (view !== 'reader') return
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowLeft') goToPage(resolvedPageIndex - 1)
       if (event.key === 'ArrowRight') goToPage(resolvedPageIndex + 1)
-      if (event.key === 'Escape') setSelection(null)
+      if (event.key === 'Escape') closeReaderOverlays()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [goToPage, resolvedPageIndex, view])
+  }, [closeReaderOverlays, goToPage, resolvedPageIndex, view])
 
   function openReader() {
     setView('reader')
@@ -417,26 +437,10 @@ function App() {
   if (view === 'reader') {
     const canGoBack = resolvedPageIndex > 0
     const canGoForward = resolvedPageIndex < pages.length - 1
+    const currentChapterTitle = currentPage?.chapterTitle ?? firstChapter?.title ?? 'Rozdział 1'
 
     return (
-      <main className="reader-view text-foreground" data-testid="reader-screen" onClick={() => setSelection(null)}>
-        <header className="reader-chrome">
-          <div className="min-w-0">
-            <button className="reader-back-link" onClick={() => setView('library')}>
-              Biblioteczka
-            </button>
-            <h1>{work?.title ?? 'Dobry wojak Szwejk'}</h1>
-          </div>
-          <div className="reader-controls" aria-label="Ustawienia czytania">
-            {debugMode ? (
-              <span className="debug-pill">
-                <Bug className="h-3.5 w-3.5" />
-                debug
-              </span>
-            ) : null}
-          </div>
-        </header>
-
+      <main className="reader-view text-foreground" data-testid="reader-screen" onClick={closeReaderOverlays}>
         {loadError ? <p className="reader-error">{loadError}</p> : null}
 
         <section className={cn('reader-stage', debugMode && 'reader-stage-debug')}>
@@ -444,11 +448,47 @@ function App() {
             className="reader-page-frame"
             aria-label={`Strona ${resolvedPageIndex + 1} z ${pageCount}`}
             data-testid="reader-page-frame"
-            onClick={() => setSelection(null)}
+            onClick={closeReaderOverlays}
           >
-            <div className="reader-page-head">
-              <span>Tom I</span>
-              <span>{currentPage?.chapterTitle ?? firstChapter?.title ?? 'Rozdział 1'}</span>
+            <div className="reader-page-head" onClick={(event) => event.stopPropagation()}>
+              <nav className="reader-breadcrumb" aria-label="Ścieżka czytania">
+                <button className="reader-crumb-button" type="button" onClick={() => setView('library')}>
+                  Biblioteczka
+                </button>
+                <span aria-hidden="true">&gt;</span>
+                <span>Dobry wojak Szwejk</span>
+                <span aria-hidden="true">&gt;</span>
+                <span>Tom I</span>
+                <span aria-hidden="true">&gt;</span>
+                <button
+                  className="reader-crumb-button reader-chapter-trigger"
+                  type="button"
+                  aria-expanded={tocOpen}
+                  aria-label={`Spis treści: ${currentChapterTitle}`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setSelection(null)
+                    setTocOpen((open) => !open)
+                  }}
+                >
+                  {currentChapterTitle}
+                </button>
+              </nav>
+              {debugMode ? (
+                <span className="debug-pill">
+                  <Bug className="h-3.5 w-3.5" />
+                  debug
+                </span>
+              ) : null}
+              {tocOpen ? (
+                <TableOfContents
+                  chapters={availableChapters}
+                  currentChapterId={currentPage?.chapterId}
+                  onSelectChapter={(chapterId) => {
+                    goToChapter(chapterId)
+                  }}
+                />
+              ) : null}
             </div>
 
             <div className="reader-page-content">
@@ -472,9 +512,18 @@ function App() {
 
             {currentPage?.footnotes.length ? <PageFootnotes footnotes={currentPage.footnotes} /> : null}
 
-            <div className="reader-page-foot">
-              <span>{resolvedPageIndex + 1}</span>
-              <span>{pageCount}</span>
+            <div className="reader-page-foot" onClick={(event) => event.stopPropagation()}>
+              <Button variant="ghost" size="sm" onClick={() => goToPage(resolvedPageIndex - 1)} disabled={!canGoBack} aria-label="Poprzednia strona">
+                <ChevronLeft className="h-4 w-4" />
+                Poprzednia
+              </Button>
+              <span className="reader-page-number tabular-nums" data-testid="reader-page-number">
+                {resolvedPageIndex + 1}
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => goToPage(resolvedPageIndex + 1)} disabled={!canGoForward} aria-label="Następna strona">
+                Następna
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </article>
 
@@ -487,20 +536,6 @@ function App() {
             />
           ) : null}
         </section>
-
-        <nav className="reader-navigation" aria-label="Nawigacja strony">
-          <Button variant="outline" onClick={() => goToPage(resolvedPageIndex - 1)} disabled={!canGoBack} aria-label="Poprzednia strona">
-            <ChevronLeft className="h-4 w-4" />
-            Poprzednia
-          </Button>
-          <span className="reader-page-counter">
-            Strona {resolvedPageIndex + 1} / {pageCount}
-          </span>
-          <Button variant="outline" onClick={() => goToPage(resolvedPageIndex + 1)} disabled={!canGoForward} aria-label="Następna strona">
-            Następna
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </nav>
       </main>
     )
   }
@@ -534,6 +569,36 @@ function App() {
         </section>
       </div>
     </main>
+  )
+}
+
+function TableOfContents({
+  chapters,
+  currentChapterId,
+  onSelectChapter,
+}: {
+  chapters: Chapter[]
+  currentChapterId?: string
+  onSelectChapter: (chapterId: string) => void
+}) {
+  return (
+    <aside className="reader-toc-popover" role="dialog" aria-label="Spis treści" onClick={(event) => event.stopPropagation()}>
+      <ol className="reader-toc-list">
+        {chapters.map((chapter, index) => (
+          <li key={chapter.id}>
+            <button
+              type="button"
+              className={cn(chapter.id === currentChapterId && 'reader-toc-current')}
+              aria-current={chapter.id === currentChapterId ? 'location' : undefined}
+              onClick={() => onSelectChapter(chapter.id)}
+            >
+              <span className="tabular-nums">{index + 1}</span>
+              <span>{chapter.title}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </aside>
   )
 }
 

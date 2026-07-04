@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -54,7 +54,46 @@ describe('App', () => {
     expect(await screen.findByTestId('reader-screen')).toBeInTheDocument()
     expect(screen.getByTestId('reader-page-frame')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /następna strona/i })).toBeInTheDocument()
+    expect(screen.getByText(/biblioteczka/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /spis treści/i })).toBeInTheDocument()
     expect(screen.getAllByTestId('reader-token').length).toBeGreaterThan(0)
+  })
+
+  it('uses a single-line breadcrumb with a clickable table of contents', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+
+    const pageFrame = await screen.findByTestId('reader-page-frame')
+    expect(within(pageFrame).getByText('Biblioteczka')).toBeInTheDocument()
+    expect(within(pageFrame).getByText('Dobry wojak Szwejk')).toBeInTheDocument()
+    expect(within(pageFrame).getByText('Tom I')).toBeInTheDocument()
+
+    await user.click(within(pageFrame).getByRole('button', { name: /spis treści/i }))
+
+    expect(await screen.findByRole('dialog', { name: /spis treści/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /szwejk w garnizonie/i }))
+
+    expect(screen.getByRole('button', { name: /spis treści: szwejk w garnizonie/i })).toBeInTheDocument()
+  })
+
+  it('keeps page 66 reachable when progress points at a paragraph slice', async () => {
+    localStorage.setItem(
+      'szwejk-reader.progress',
+      JSON.stringify({
+        workId: 'work-szwejk',
+        volumeId: 'volume-1',
+        chapterId: 'chapter-010',
+        paragraphId: 'book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0022',
+        segmentId: 'book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0022:hybrid::slice:384:495',
+        updatedAt: '2026-07-04T00:00:00.000Z',
+      }),
+    )
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+
+    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('66')
   })
 
   it('loads the whole first volume from v13 plan and full hierarchical alignment artifacts', () => {
@@ -111,6 +150,7 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: /pobierz moje poprawki json/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /zwiększ font/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/wielkość fontu/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/strona\s+\d+\s*\/\s*\d+/i)).not.toBeInTheDocument()
     expect(container.querySelector('.debug-panel')).not.toBeInTheDocument()
   })
 

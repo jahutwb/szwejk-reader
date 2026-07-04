@@ -13,9 +13,9 @@
   --border: 38 19% 78%;
   --input: 38 19% 78%;
   --ring: 214 44% 24%;
-  --reader-font-size: 17px;
-  --reader-line-height: 1.32;
-  --reader-page-width: 48rem;
+  --reader-font-size: 18px;
+  --reader-line-height: 1.38;
+  --reader-page-width: 52rem;
   --reader-source-font: "TeX Gyre Pagella", Georgia, "Times New Roman", serif;
   --reader-target-font: "TeX Gyre Heros", Arial, Helvetica, sans-serif;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -176,48 +176,10 @@ input {
   display: grid;
   height: 100vh;
   height: 100svh;
-  min-height: 38rem;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 32rem;
+  grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
-  padding: clamp(0.65rem, 2vw, 1.1rem);
-}
-
-.reader-chrome {
-  display: flex;
-  min-height: 3.75rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.reader-chrome h1 {
-  overflow: hidden;
-  margin: 0;
-  font-size: clamp(1.1rem, 2.5vw, 1.55rem);
-  font-weight: 650;
-  letter-spacing: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.reader-back-link {
-  border: 0;
-  background: transparent;
-  color: hsl(var(--muted-foreground));
-  cursor: pointer;
-  padding: 0;
-  font-size: 0.9rem;
-}
-
-.reader-back-link:hover {
-  color: hsl(var(--foreground));
-}
-
-.reader-controls {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
+  padding: clamp(0.35rem, 1vw, 0.7rem);
 }
 
 .debug-pill {
@@ -235,6 +197,7 @@ input {
 .reader-stage {
   display: flex;
   min-height: 0;
+  height: 100%;
   align-items: stretch;
   justify-content: center;
   gap: 1rem;
@@ -249,6 +212,7 @@ input {
   position: relative;
   display: flex;
   width: min(var(--reader-page-width), calc(100vw - 2rem));
+  height: 100%;
   min-width: 0;
   flex-direction: column;
   overflow: hidden;
@@ -267,27 +231,126 @@ input {
   justify-content: space-between;
   gap: 1rem;
   color: hsl(220 12% 41%);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   letter-spacing: 0;
 }
 
 .reader-page-head {
-  min-height: 2.6rem;
+  position: relative;
+  min-height: 2.15rem;
   border-bottom: 1px solid hsl(38 20% 84%);
-  padding: 0 1.35rem;
+  padding: 0 1rem;
+}
+
+.reader-breadcrumb {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 0.38rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.reader-breadcrumb > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reader-crumb-button {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: hsl(220 12% 31%);
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.reader-crumb-button:hover {
+  color: hsl(var(--foreground));
+}
+
+.reader-chapter-trigger {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reader-toc-popover {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0.85rem;
+  z-index: 6;
+  width: min(24rem, calc(100vw - 1.4rem));
+  max-height: min(32rem, calc(100svh - 5rem));
+  overflow: auto;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: hsl(44 43% 98%);
+  box-shadow: 0 18px 44px hsl(220 18% 13% / 0.18);
+  padding: 0.45rem;
+}
+
+.reader-toc-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reader-toc-list button {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 2.1rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: baseline;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  padding: 0.48rem 0.55rem;
+  text-align: left;
+}
+
+.reader-toc-list button:hover,
+.reader-toc-list .reader-toc-current {
+  background: hsl(var(--muted));
+}
+
+.reader-toc-list button span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reader-page-foot {
-  min-height: 2.45rem;
+  min-height: 2.35rem;
   border-top: 1px solid hsl(38 20% 84%);
-  padding: 0 1.35rem;
+  padding: 0 0.85rem;
+}
+
+.reader-page-foot button {
+  height: 1.9rem;
+  padding-inline: 0.55rem;
+  color: hsl(220 12% 31%);
+  font-size: 0.78rem;
+}
+
+.reader-page-number {
+  min-width: 2.4rem;
+  color: hsl(220 12% 41%);
+  font-family: var(--reader-source-font);
+  text-align: center;
 }
 
 .reader-page-content {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  padding: clamp(1.15rem, 3.4vh, 2rem) clamp(1.35rem, 6vw, 3.9rem) 0.65rem;
+  padding: clamp(0.85rem, 2.4vh, 1.45rem) clamp(1.15rem, 5vw, 3.25rem) 0.45rem;
 }
 
 .reader-paragraph {
@@ -413,21 +476,6 @@ input {
   font-family: var(--reader-source-font);
 }
 
-.reader-navigation {
-  display: flex;
-  min-height: 3.6rem;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(0.5rem, 2vw, 1rem);
-}
-
-.reader-page-counter {
-  min-width: 7.5rem;
-  color: hsl(var(--muted-foreground));
-  font-size: 0.9rem;
-  text-align: center;
-}
-
 .reader-error {
   border: 1px solid hsl(var(--border));
   border-radius: 6px;
@@ -524,24 +572,34 @@ input {
   }
 
   .reader-view {
-    min-height: 34rem;
-    padding: 0.55rem;
+    min-height: 32rem;
+    padding: 0.3rem;
   }
 
-  .reader-chrome {
-    min-height: 4.7rem;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.65rem;
+  .reader-page-frame {
+    width: calc(100vw - 0.6rem);
   }
 
-  .reader-controls {
-    width: 100%;
-    justify-content: space-between;
+  .reader-page-head {
+    min-height: 2rem;
+    padding-inline: 0.75rem;
+  }
+
+  .reader-breadcrumb {
+    gap: 0.28rem;
+  }
+
+  .reader-breadcrumb span:nth-of-type(2) {
+    display: none;
+  }
+
+  .reader-toc-popover {
+    right: 0.3rem;
+    width: calc(100vw - 1.2rem);
   }
 
   .reader-page-content {
-    padding: 1rem 1rem 0.5rem;
+    padding: 0.8rem 0.9rem 0.4rem;
   }
 
   .reader-paragraph {
@@ -553,12 +611,14 @@ input {
     max-width: 22rem;
   }
 
-  .reader-navigation {
-    justify-content: space-between;
+  .reader-page-foot {
+    min-height: 2.25rem;
+    padding-inline: 0.55rem;
   }
 
-  .reader-page-counter {
-    min-width: auto;
+  .reader-page-foot button {
+    padding-inline: 0.42rem;
+    font-size: 0.72rem;
   }
 
   .reader-stage-debug {
