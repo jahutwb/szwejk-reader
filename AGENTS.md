@@ -19,6 +19,7 @@
 - Build the reader UI page by page, not as continuous scrolling text.
 - Consider mobile layout, touch targets, and swipe navigation from the beginning.
 - Store reading progress by stable location, not by transient page number.
+- Match hybrydyzer LaTeX typography where practical: PL text uses TeX Gyre Pagella, CS substitutions use TeX Gyre Heros, paragraphs use first-line indentation and no extra paragraph gap.
 
 ## Safety And Verification
 
@@ -29,4 +30,4 @@
 
 ## Current Phase
 
-The current phase is MVP-0: a Vite/React public reader shell with a real chapter-016 hybridization fixture, runtime validation, a book-like single-page reader view, simple page navigation, compact token counterpart popovers, local telemetry, and debug/admin tools hidden behind `?debug=1`. Render prose from `segment.text` plus token offsets; do not add synthetic spaces after tokens. Do not implement final typographic pagination, payments, accounts, public correction workflows, or the full alignment editor until Jan explicitly asks for them.
+The current phase is MVP-0: a Vite/React public reader shell with a real volume-1 fullbook-derived hybridization fixture, runtime validation, a book-like single-page reader view, simple page navigation, compact token counterpart popovers, local telemetry, and debug/admin tools hidden behind `?debug=1`. Render prose from `segment.text` plus token offsets; do not add synthetic spaces after tokens. Do not implement final typographic pagination, payments, accounts, public correction workflows, or the full alignment editor until Jan explicitly asks for them.

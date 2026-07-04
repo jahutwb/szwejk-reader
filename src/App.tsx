@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { BookOpen, Bug, ChevronLeft, ChevronRight, Download, Lock, Minus, Plus, X } from 'lucide-react'
+import { BookOpen, Bug, ChevronLeft, ChevronRight, Download, Lock, Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { loadMiniFixture } from '@/data/fixture'
 import { findSmallestCandidateForToken } from '@/domain/selection'
@@ -13,8 +13,10 @@ type View = 'library' | 'reader'
 type TokenSelection = {
   token: Token
   paragraph: Paragraph
+  chapterId: string
   segmentId: string
   candidateIds: string[]
+  candidateOptions: Candidate[]
   activeCandidate?: Candidate
   anchor?: {
     x: number
@@ -24,6 +26,8 @@ type TokenSelection = {
 
 type ReaderPage = {
   id: string
+  chapterId: string
+  chapterTitle: string
   paragraphs: Paragraph[]
 }
 
@@ -77,8 +81,12 @@ function readProgress(): ReaderProgress | null {
   }
 }
 
-function getFirstAvailableChapter(fixture: ReaderFixture | null): Chapter | undefined {
-  return fixture?.work.volumes.find((volume) => volume.id === FIXTURE_VOLUME_ID)?.chapters[0]
+function getAvailableVolume(fixture: ReaderFixture | null): Volume | undefined {
+  return fixture?.work.volumes.find((volume) => volume.id === FIXTURE_VOLUME_ID)
+}
+
+function getAvailableChapters(fixture: ReaderFixture | null): Chapter[] {
+  return getAvailableVolume(fixture)?.chapters ?? []
 }
 
 function getReaderSegment(paragraph: Paragraph) {
@@ -91,35 +99,52 @@ function estimateParagraphLength(paragraph: Paragraph): number {
 }
 
 function getApproxPageCapacity(fontSize: number): number {
-  return Math.max(520, Math.round(1330 - fontSize * 32))
+  return Math.max(760, Math.round(1900 - fontSize * 44))
 }
 
-function buildReaderPages(chapter: Chapter | undefined, fontSize: number): ReaderPage[] {
-  if (!chapter) return []
+function buildReaderPages(chapters: Chapter[], fontSize: number): ReaderPage[] {
   const capacity = getApproxPageCapacity(fontSize)
   const pages: ReaderPage[] = []
-  let current: Paragraph[] = []
-  let currentLength = 0
+  for (const chapter of chapters) {
+    let current: Paragraph[] = []
+    let currentLength = 0
 
-  for (const paragraph of chapter.paragraphs) {
-    const paragraphLength = estimateParagraphLength(paragraph)
-    const nextLength = currentLength + paragraphLength
-
-    if (current.length > 0 && nextLength > capacity) {
-      pages.push({ id: `${chapter.id}-page-${pages.length + 1}`, paragraphs: current })
+    const pushPage = () => {
+      if (current.length === 0) return
+      pages.push({
+        id: `${chapter.id}-page-${pages.filter((page) => page.chapterId === chapter.id).length + 1}`,
+        chapterId: chapter.id,
+        chapterTitle: chapter.title,
+        paragraphs: current,
+      })
       current = []
       currentLength = 0
     }
 
-    current.push(paragraph)
-    currentLength += paragraphLength
-  }
+    for (const paragraph of chapter.paragraphs) {
+      const paragraphLength = estimateParagraphLength(paragraph)
+      const nextLength = currentLength + paragraphLength
 
-  if (current.length > 0) {
-    pages.push({ id: `${chapter.id}-page-${pages.length + 1}`, paragraphs: current })
+      if (current.length > 0 && nextLength > capacity) {
+        pushPage()
+      }
+
+      current.push(paragraph)
+      currentLength += paragraphLength
+    }
+
+    pushPage()
   }
 
   return pages
+}
+
+function getCandidateOptionsForToken(candidates: Candidate[], token: Token): Candidate[] {
+  const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]))
+  const options = token.candidateIds.map((candidateId) => byId.get(candidateId)).filter((candidate): candidate is Candidate => Boolean(candidate))
+  if (options.length > 0) return options
+  const fallback = findSmallestCandidateForToken(candidates, token.id)
+  return fallback ? [fallback] : []
 }
 
 function downloadJson(filename: string, value: unknown): void {
@@ -150,8 +175,10 @@ function App() {
   const debugMode = useMemo(() => getDebugMode(), [])
   const work = fixture?.work
   const volumes = work?.volumes ?? defaultVolumes
-  const activeChapter = useMemo(() => getFirstAvailableChapter(fixture), [fixture])
-  const pages = useMemo(() => buildReaderPages(activeChapter, fontSize), [activeChapter, fontSize])
+  const availableChapters = useMemo(() => getAvailableChapters(fixture), [fixture])
+  const firstChapter = availableChapters[0]
+  const chapterById = useMemo(() => new Map(availableChapters.map((chapter) => [chapter.id, chapter])), [availableChapters])
+  const pages = useMemo(() => buildReaderPages(availableChapters, fontSize), [availableChapters, fontSize])
   const resolvedPageIndex = useMemo(() => {
     if (pages.length === 0) return 0
     const paragraphId = currentLocation?.paragraphId
@@ -187,19 +214,17 @@ function App() {
   }, [fontSize])
 
   const writeProgress = useCallback(
-    (progress: Omit<ReaderProgress, 'workId' | 'volumeId' | 'chapterId' | 'updatedAt'>) => {
-      if (!activeChapter) return
+    (progress: Omit<ReaderProgress, 'workId' | 'volumeId' | 'updatedAt'>) => {
       const nextProgress: ReaderProgress = {
         workId: work?.id ?? 'work-szwejk',
         volumeId: FIXTURE_VOLUME_ID,
-        chapterId: activeChapter.id,
         ...progress,
         updatedAt: new Date().toISOString(),
       }
       localStorage.setItem(PROGRESS_KEY, JSON.stringify(nextProgress))
       setCurrentLocation(nextProgress)
     },
-    [activeChapter, work?.id],
+    [work?.id],
   )
 
   const goToPage = useCallback(
@@ -213,6 +238,7 @@ function App() {
       setSelection(null)
       if (firstParagraph) {
         writeProgress({
+          chapterId: nextPage.chapterId,
           paragraphId: firstParagraph.id,
           segmentId: firstSegment?.id,
           tokenId: firstSegment?.tokens[0]?.id,
@@ -237,15 +263,18 @@ function App() {
     setView('reader')
   }
 
-  function handleTokenClick(paragraph: Paragraph, segmentId: string, token: Token, anchor?: DOMRect) {
-    const chapter = activeChapter
+  function handleTokenClick(chapterId: string, paragraph: Paragraph, segmentId: string, token: Token, anchor?: DOMRect) {
+    const chapter = chapterById.get(chapterId)
     if (!chapter) return
-    const activeCandidate = findSmallestCandidateForToken(chapter.candidates, token.id)
+    const candidateOptions = getCandidateOptionsForToken(chapter.candidates, token)
+    const activeCandidate = candidateOptions[0] ?? findSmallestCandidateForToken(chapter.candidates, token.id)
     const nextSelection = {
       token,
       paragraph,
+      chapterId,
       segmentId,
       candidateIds: token.candidateIds,
+      candidateOptions,
       activeCandidate,
       anchor: anchor
         ? {
@@ -256,6 +285,7 @@ function App() {
     }
     setSelection(nextSelection)
     writeProgress({
+      chapterId,
       paragraphId: paragraph.id,
       segmentId,
       tokenId: token.id,
@@ -263,7 +293,7 @@ function App() {
     logWordClick({
       workId: work?.id ?? 'work-szwejk',
       volumeId: FIXTURE_VOLUME_ID,
-      chapterId: chapter.id,
+      chapterId,
       paragraphId: paragraph.id,
       tokenId: token.id,
       tokenText: token.text,
@@ -273,13 +303,17 @@ function App() {
     })
   }
 
+  function selectCandidate(candidate: Candidate) {
+    setSelection((current) => (current ? { ...current, activeCandidate: candidate } : current))
+  }
+
   async function saveDebugOverride() {
-    if (!selection || !activeChapter) return
+    if (!selection) return
     const override: ReaderOverride = {
       id: `override-${Date.now()}`,
       workId: work?.id ?? 'work-szwejk',
       volumeId: FIXTURE_VOLUME_ID,
-      chapterId: activeChapter.id,
+      chapterId: selection.chapterId,
       baseArtifactId: fixture?.metadata.sourceArtifactId,
       createdAt: new Date().toISOString(),
       operations: [
@@ -313,7 +347,7 @@ function App() {
     const canGoForward = resolvedPageIndex < pages.length - 1
 
     return (
-      <main className="reader-view text-foreground" data-testid="reader-screen">
+      <main className="reader-view text-foreground" data-testid="reader-screen" onClick={() => setSelection(null)}>
         <header className="reader-chrome">
           <div className="min-w-0">
             <button className="reader-back-link" onClick={() => setView('library')}>
@@ -356,10 +390,11 @@ function App() {
             className="reader-page-frame"
             aria-label={`Strona ${resolvedPageIndex + 1} z ${pageCount}`}
             data-testid="reader-page-frame"
+            onClick={() => setSelection(null)}
           >
             <div className="reader-page-head">
               <span>Tom I</span>
-              <span>{activeChapter?.title?.replace(' - mini fixture', '') ?? 'Rozdział 1'}</span>
+              <span>{currentPage?.chapterTitle ?? firstChapter?.title ?? 'Rozdział 1'}</span>
             </div>
 
             <div className="reader-page-content">
@@ -368,14 +403,14 @@ function App() {
                   key={paragraph.id}
                   paragraph={paragraph}
                   workId={work?.id ?? 'work-szwejk'}
-                  chapterId={activeChapter?.id ?? 'chapter-001'}
+                  chapterId={currentPage.chapterId}
                   selection={selection}
                   onTokenClick={handleTokenClick}
                 />
               ))}
             </div>
 
-            <ReaderPopover selection={selection} onClose={() => setSelection(null)} />
+            <ReaderPopover selection={selection} onSelectCandidate={selectCandidate} />
 
             <div className="reader-page-foot">
               <span>{resolvedPageIndex + 1}</span>
@@ -426,7 +461,7 @@ function App() {
             <h2>Dobry wojak Szwejk</h2>
             <p>Publiczny czytnik tomu I. Kliknij słowo w tekście, żeby zobaczyć równoległy fragment zaraz przy zaznaczeniu.</p>
             {loadError ? <p className="reader-error">{loadError}</p> : null}
-            <Button onClick={openReader} disabled={!fixture || !activeChapter}>
+            <Button onClick={openReader} disabled={!fixture || !firstChapter}>
               <BookOpen className="h-4 w-4" />
               Czytaj Tom I
             </Button>
@@ -453,7 +488,7 @@ function ReaderParagraph({
   workId: string
   chapterId: string
   selection: TokenSelection | null
-  onTokenClick: (paragraph: Paragraph, segmentId: string, token: Token, anchor?: DOMRect) => void
+  onTokenClick: (chapterId: string, paragraph: Paragraph, segmentId: string, token: Token, anchor?: DOMRect) => void
 }) {
   const segment = getReaderSegment(paragraph)
   if (!segment) return null
@@ -484,11 +519,15 @@ function ReaderParagraph({
             tabIndex={0}
             data-testid="reader-token"
             className={cn('reader-token', token.language === 'cs' && 'reader-token-target', activeRange && 'reader-token-active', clicked && 'reader-token-clicked')}
-            onClick={(event) => onTokenClick(paragraph, segment.id, token, event.currentTarget.getBoundingClientRect())}
+            onClick={(event) => {
+              event.stopPropagation()
+              onTokenClick(chapterId, paragraph, segment.id, token, event.currentTarget.getBoundingClientRect())
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()
-                onTokenClick(paragraph, segment.id, token, event.currentTarget.getBoundingClientRect())
+                event.stopPropagation()
+                onTokenClick(chapterId, paragraph, segment.id, token, event.currentTarget.getBoundingClientRect())
               }
             }}
             data-work-id={workId}
@@ -508,10 +547,22 @@ function ReaderParagraph({
   )
 }
 
-function ReaderPopover({ selection, onClose }: { selection: TokenSelection | null; onClose: () => void }) {
+function ReaderPopover({
+  selection,
+  onSelectCandidate,
+}: {
+  selection: TokenSelection | null
+  onSelectCandidate: (candidate: Candidate) => void
+}) {
   if (!selection) return null
   const candidate = selection.activeCandidate
   const counterpart = selection.token.language === 'pl' ? candidate?.targetText : candidate?.sourceText
+  const activeIndex = Math.max(
+    0,
+    selection.candidateOptions.findIndex((option) => option.id === candidate?.id),
+  )
+  const canShrink = activeIndex > 0
+  const canExpand = activeIndex >= 0 && activeIndex < selection.candidateOptions.length - 1
   const style = selection.anchor
     ? ({
         left: `${selection.anchor.x}px`,
@@ -520,13 +571,39 @@ function ReaderPopover({ selection, onClose }: { selection: TokenSelection | nul
     : undefined
 
   return (
-    <aside className="reader-popover" role="dialog" aria-label="Równoległy tekst" style={style}>
-      <div className="reader-popover-actions">
-        <button type="button" aria-label="Zamknij odpowiednik" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </button>
-      </div>
+    <aside className="reader-popover" role="dialog" aria-label="Równoległy tekst" style={style} onClick={(event) => event.stopPropagation()}>
       <blockquote lang={selection.token.language === 'pl' ? 'cs' : 'pl'}>{counterpart || 'Brak jednoznacznego odpowiednika dla tego słowa.'}</blockquote>
+      {selection.candidateOptions.length > 1 ? (
+        <div className="reader-popover-hierarchy">
+          <button
+            type="button"
+            aria-label="Mniejszy zakres"
+            disabled={!canShrink}
+            onClick={(event) => {
+              event.stopPropagation()
+              const next = selection.candidateOptions[activeIndex - 1]
+              if (next) onSelectCandidate(next)
+            }}
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+          <span className="tabular-nums">
+            {activeIndex + 1}/{selection.candidateOptions.length}
+          </span>
+          <button
+            type="button"
+            aria-label="Większy zakres"
+            disabled={!canExpand}
+            onClick={(event) => {
+              event.stopPropagation()
+              const next = selection.candidateOptions[activeIndex + 1]
+              if (next) onSelectCandidate(next)
+            }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ) : null}
     </aside>
   )
 }

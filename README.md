@@ -4,7 +4,7 @@ Webowa aplikacja czytelnicza dla hybrydowego wydania PL -> CS "Dobrego wojaka Sz
 
 ## Status
 
-Aktualny etap: MVP-0. Istnieje działająca aplikacja Vite + React + TypeScript z fixture'em prawdziwego rozdziału, biblioteczką, publicznym widokiem czytnika, klikaniem słów, lokalną telemetryką i ukrytym trybem debug/admin.
+Aktualny etap: MVP-0. Istnieje działająca aplikacja Vite + React + TypeScript z fixture'em prawdziwego Tomu I, biblioteczką, publicznym widokiem czytnika, klikaniem słów, lokalną telemetryką i ukrytym trybem debug/admin.
 
 To nadal nie jest finalny czytnik książkowy. Obecna paginacja jest prosta i przybliżona, tylko po to, żeby wymusić kierunek UX: jedna strona/obszar czytania na ekranie, bez scrollowania tekstu głównego. Przypisy na dole strony, pełny edytor alignmentu, konta użytkowników i płatności są poza zakresem MVP-0.
 
@@ -26,16 +26,16 @@ Dev server domyślnie startuje na `http://127.0.0.1:5173/`.
 
 ## Dane fixture
 
-MVP-0 nie ładuje całej książki. Fixture jest w:
+MVP-0 ładuje cały Tom I jako wygenerowany fixture, ale nie kopiuje pełnych 100-300 MB artefaktów hybrydyzera. Fixture jest w:
 
-- `public/data/fixtures/szwejk-mini/reader-fixture.json` - renderowalny fixture wygenerowany skryptem `scripts/extract-fixture.py`.
+- `public/data/fixtures/szwejk-mini/reader-fixture.json` - renderowalny fixture Tomu I wygenerowany skryptem `scripts/extract-fixture.py`.
 
 Źródła fixture'a:
 
-- alignment checkpoint: `~/PycharmProjects/hybrydyzer/data/artifacts/experiments/coverage_tiles_selfslot_v0_ch016_smoke/work/segment_checkpoints/chapter_016.json`,
-- plan hybrydyzacji: `~/PycharmProjects/hybrydyzer/data/artifacts/experiments/coverage_tiles_selfslot_v0_ch016_smoke/hybridization/hybridization_plan.coverage_tiles_selfslot_v0_ch016_smoke.json`.
+- alignment checkpoints: `~/PycharmProjects/hybrydyzer/data/artifacts/experiments/coverage_tiles_selfslot_v0_fullbook/work/segment_checkpoints/chapter_001.json` ... `chapter_017.json`,
+- plan hybrydyzacji: `~/PycharmProjects/hybrydyzer/data/artifacts/experiments/coverage_tiles_selfslot_v0_fullbook_hybridization/hybridization/hybridization_plan.coverage_tiles_selfslot_v0_fullbook.json`.
 
-Pełne alignmenty 200-300 MB i plany 100+ MB nie są kopiowane do aplikacji.
+Aktualny fixture ma 17 rozdziałów, 1713 akapitów, 8575 kandydatów alignmentowych i 71748 tokenów. Pełne alignmenty 200-300 MB i pełny plan około 200 MB nie są kopiowane do aplikacji.
 
 ## Kształt danych
 
@@ -45,7 +45,8 @@ Fixture ma strukturę:
 - każdy `Paragraph` ma renderowany segment `hybrid`,
 - segment `hybrid` zawiera wymieszane tokeny PL/CS wygenerowane z `selected_candidates`,
 - każdy `RenderSegment` ma stabilne `Token[]` i offsety w `segment.text`,
-- `Candidate[]` opisuje zakresy alignmentowe przez listy `tokenIds`,
+- `Candidate[]` opisuje zakresy alignmentowe przez listy `tokenIds` oraz `parentId`,
+- tokeny czeskich podstawień przechowują łańcuch `candidateIds` od najmniejszego kandydata do jego rodziców,
 - `Footnote[]` i `GlossaryEntry[]` istnieją w kontrakcie, ale w MVP-0 są puste.
 
 Typy są w `src/domain/types.ts`, a walidatory runtime w `src/domain/schemas.ts`.
@@ -58,13 +59,15 @@ Aplikacja zawiera:
 - kartę "Dobry wojak Szwejk",
 - Tom I jako aktywny/darmowy,
 - Tomy II-IV jako zablokowane albo wkrótce,
-- ekran czytania rozdziału 016 z prawdziwego planu hybrydyzacji,
+- ekran czytania Tomu I z prawdziwego planu hybrydyzacji,
 - książkową ramę strony o wysokości ekranu,
 - prostą nawigację poprzednia/następna strona,
 - kontrolkę wielkości fontu,
 - zapis ostatniego klikniętego tokena jako pozycji czytania w `localStorage`.
 
-W normalnym trybie publicznym tekst czeski nie jest stale renderowany pod polskim akapitem. Czytelnik widzi tekst hybrydowy w stronie książkowej, a równoległy fragment pojawia się dopiero po kliknięciu słowa.
+W normalnym trybie publicznym tekst czeski nie jest stale renderowany pod polskim akapitem. Czytelnik widzi tekst hybrydowy w stronie książkowej, a równoległy fragment pojawia się dopiero po kliknięciu słowa. Popover znika po kliknięciu poza nim.
+
+Skład jest zbliżany do renderu LaTeX z `hybrydyzer`: polski tekst używa `TeX Gyre Pagella`, czeskie podstawienia `TeX Gyre Heros`, akapity nie mają dodatkowego odstępu pionowego, a pierwszy wiersz ma książkowe wcięcie.
 
 Interpunkcja jest odtwarzana z `segment.text` i offsetów tokenów. Renderer nie dokleja sztucznych spacji po tokenach.
 
@@ -82,7 +85,7 @@ Każdy renderowany token ma stabilne atrybuty DOM:
 - `data-token-id`,
 - `data-candidate-ids`.
 
-Kliknięcie tokena w trybie publicznym pokazuje mały popover przy zaznaczonym słowie z równoległym fragmentem w drugim języku. Popover nie pokazuje technicznych etykiet typu `Czeski odpowiednik`.
+Kliknięcie tokena w trybie publicznym pokazuje mały popover przy zaznaczonym słowie z równoległym fragmentem w drugim języku. Popover nie pokazuje technicznych etykiet typu `Czeski odpowiednik`. Jeżeli token ma hierarchię kandydatów, popover pokazuje małe kontrolki `-` / `+` do zmiany zakresu.
 
 Panel `Token debug`, `candidate_ids`, aktywny kandydat i eksport override'ów są dostępne wyłącznie w trybie debug:
 
@@ -135,7 +138,7 @@ npm run build
 - swipe na mobile,
 - publicznego formularza "Zgłoś poprawkę",
 - pełnego edytora alignmentu,
-- pełnego ładowania książki,
+- pełnego ładowania tomów II-IV i całej książki,
 - integracji z prawdziwym here.now Site Data endpointem,
 - płatności,
 - kont użytkowników.
