@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'r
 import { BookOpen, Bug, ChevronLeft, ChevronRight, Download, Lock, Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { loadMiniFixture } from '@/data/fixture'
+import { buildReaderPages, getReaderSegment } from '@/domain/pagination'
 import { findSmallestCandidateForToken } from '@/domain/selection'
 import { splitTokenTextParts } from '@/domain/textSegments'
-import type { Candidate, Chapter, Footnote, Paragraph, ReaderFixture, ReaderOverride, RenderSegment, Token, Volume } from '@/domain/types'
+import type { Candidate, Chapter, Footnote, Paragraph, ReaderFixture, ReaderOverride, Token, Volume } from '@/domain/types'
 import { logCorrectionEvent, logWordClick, submitOverrides } from '@/telemetry/telemetry'
 import { cn } from '@/lib/utils'
 
@@ -24,21 +25,6 @@ type TokenSelection = {
   }
 }
 
-type ReaderPage = {
-  id: string
-  chapterId: string
-  chapterTitle: string
-  isChapterOpening: boolean
-  blocks: ReaderPageBlock[]
-  footnotes: Footnote[]
-}
-
-type ReaderPageBlock = {
-  id: string
-  paragraph: Paragraph
-  continuation: boolean
-}
-
 type ReaderProgress = {
   workId: string
   volumeId: string
@@ -52,10 +38,6 @@ type ReaderProgress = {
 const FIXTURE_VOLUME_ID = 'volume-1'
 const PROGRESS_KEY = 'szwejk-reader.progress'
 const OVERRIDES_KEY = 'szwejk-reader.overrides'
-const ESTIMATED_CHARS_PER_LINE = 56
-const PAGE_LINE_CAPACITY = 33
-const MIN_TRAILING_PAGE_LINES = 4
-const CHAPTER_TITLE_LINE_COST = 5
 
 const defaultVolumes: Volume[] = [
   { id: 'volume-1', label: 'Tom I', status: 'available', chapters: [] },
@@ -91,136 +73,6 @@ function getAvailableVolume(fixture: ReaderFixture | null): Volume | undefined {
 
 function getAvailableChapters(fixture: ReaderFixture | null): Chapter[] {
   return getAvailableVolume(fixture)?.chapters ?? []
-}
-
-function getReaderSegment(paragraph: Paragraph) {
-  return paragraph.segments.find((segment) => segment.language === 'hybrid') ?? paragraph.segments.find((segment) => segment.language === 'pl') ?? paragraph.segments[0]
-}
-
-function estimateTextLineCost(text: string): number {
-  const compactLength = text.replace(/\s+/g, ' ').trim().length
-  return Math.max(1, Math.ceil(compactLength / ESTIMATED_CHARS_PER_LINE))
-}
-
-function estimateParagraphLineCost(paragraph: Paragraph): number {
-  const readerSegment = getReaderSegment(paragraph)
-  return estimateTextLineCost(readerSegment?.text ?? '')
-}
-
-function findSliceEnd(segment: RenderSegment, start: number, lineCapacity: number): number {
-  const textLength = segment.text.length
-  const capacity = Math.max(lineCapacity, MIN_TRAILING_PAGE_LINES) * ESTIMATED_CHARS_PER_LINE
-  if (start + capacity >= textLength) return textLength
-  const target = start + capacity
-  const minTrailingChars = MIN_TRAILING_PAGE_LINES * ESTIMATED_CHARS_PER_LINE
-  const candidates = segment.tokens.filter((token) => token.end <= target && token.end > start + minTrailingChars)
-  if (candidates.length > 0) return candidates[candidates.length - 1].end
-  const fallback = segment.tokens.find((token) => token.end > start)
-  return fallback?.end ?? textLength
-}
-
-function sliceParagraph(paragraph: Paragraph, start: number, end: number): Paragraph {
-  const segment = getReaderSegment(paragraph)
-  if (!segment) return paragraph
-  const text = segment.text.slice(start, end)
-  const tokens = segment.tokens
-    .filter((token) => token.start >= start && token.end <= end)
-    .map((token) => ({
-      ...token,
-      start: token.start - start,
-      end: token.end - start,
-    }))
-  const candidateIds = Array.from(new Set(tokens.flatMap((token) => token.candidateIds)))
-  return {
-    ...paragraph,
-    segments: [
-      {
-        ...segment,
-        id: `${segment.id}::slice:${start}:${end}`,
-        text,
-        tokens,
-        candidateIds,
-      },
-    ],
-  }
-}
-
-function collectPageFootnotes(chapter: Chapter, blocks: ReaderPageBlock[]): Footnote[] {
-  const byId = new Map(chapter.footnotes.map((footnote) => [footnote.id, footnote]))
-  const seen = new Set<string>()
-  const footnotes: Footnote[] = []
-  for (const block of blocks) {
-    const segment = getReaderSegment(block.paragraph)
-    for (const token of segment?.tokens ?? []) {
-      for (const footnoteId of token.footnoteIds ?? []) {
-        if (seen.has(footnoteId)) continue
-        const footnote = byId.get(footnoteId)
-        if (!footnote) continue
-        seen.add(footnoteId)
-        footnotes.push(footnote)
-      }
-    }
-  }
-  return footnotes
-}
-
-function buildReaderPages(chapters: Chapter[]): ReaderPage[] {
-  const pages: ReaderPage[] = []
-  for (const chapter of chapters) {
-    let current: ReaderPageBlock[] = []
-    let currentLineCost = CHAPTER_TITLE_LINE_COST
-    let pageIndexInChapter = 1
-
-    const pushPage = () => {
-      if (current.length === 0) return
-      const nextPageIndex = pageIndexInChapter
-      pages.push({
-        id: `${chapter.id}-page-${nextPageIndex}`,
-        chapterId: chapter.id,
-        chapterTitle: chapter.title,
-        isChapterOpening: nextPageIndex === 1,
-        blocks: current,
-        footnotes: collectPageFootnotes(chapter, current),
-      })
-      current = []
-      currentLineCost = 0
-      pageIndexInChapter += 1
-    }
-
-    for (const paragraph of chapter.paragraphs) {
-      const segment = getReaderSegment(paragraph)
-      if (!segment) continue
-      let start = 0
-      let sliceIndex = 0
-      while (start < segment.text.length) {
-        if (current.length > 0 && PAGE_LINE_CAPACITY - currentLineCost < MIN_TRAILING_PAGE_LINES) {
-          pushPage()
-        }
-        const remaining = PAGE_LINE_CAPACITY - currentLineCost
-        const end = findSliceEnd(segment, start, Math.max(remaining, MIN_TRAILING_PAGE_LINES))
-        const sliced = sliceParagraph(paragraph, start, end)
-        const slicedLineCost = estimateParagraphLineCost(sliced)
-        current.push({
-          id: `${paragraph.id}:page-slice:${sliceIndex}:${start}:${end}`,
-          paragraph: sliced,
-          continuation: start > 0,
-        })
-        currentLineCost += slicedLineCost
-        start = end
-        sliceIndex += 1
-        while (start < segment.text.length && /\s/.test(segment.text[start])) {
-          start += 1
-        }
-        if (start < segment.text.length && currentLineCost >= PAGE_LINE_CAPACITY) {
-          pushPage()
-        }
-      }
-    }
-
-    pushPage()
-  }
-
-  return pages
 }
 
 function getCandidateOptionsForToken(candidates: Candidate[], token: Token): Candidate[] {

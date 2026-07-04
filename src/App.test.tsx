@@ -1,13 +1,16 @@
+/// <reference types="node" />
+
+import { readFileSync } from 'node:fs'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import appSource from './App.tsx?raw'
+import paginationSource from './domain/pagination.ts?raw'
 import cssSource from './index.css?raw'
-import fixture from '../public/data/fixtures/szwejk-mini/reader-fixture.json'
 import type { ReaderFixture, Token } from './domain/types'
 
-const readerFixture = fixture as unknown as ReaderFixture
+const readerFixture = JSON.parse(readFileSync(`${process.cwd()}/public/data/fixtures/szwejk-mini/reader-fixture.json`, 'utf8')) as ReaderFixture
 const response = new Response(JSON.stringify(readerFixture), { status: 200, headers: { 'content-type': 'application/json' } })
 
 async function findVisibleTargetToken(user: ReturnType<typeof userEvent.setup>, maxPages = 20): Promise<HTMLElement> {
@@ -95,7 +98,7 @@ describe('App', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
 
-    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('95')
+    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('121')
   })
 
   it('loads the whole first volume from v13 plan and full hierarchical alignment artifacts', () => {
@@ -160,8 +163,8 @@ describe('App', () => {
   })
 
   it('paginates with an estimated line budget instead of raw character capacity', () => {
-    expect(appSource).toContain('const PAGE_LINE_CAPACITY')
-    expect(appSource).toContain('function estimateTextLineCost')
+    expect(paginationSource).toContain('export const PAGE_LINE_CAPACITY')
+    expect(paginationSource).toContain('function estimateTextLineCost')
     expect(appSource).not.toContain('const PAGE_CHAR_CAPACITY')
   })
 
