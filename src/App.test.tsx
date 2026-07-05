@@ -8,10 +8,12 @@ import App from './App'
 import appSource from './App.tsx?raw'
 import paginationSource from './domain/pagination.ts?raw'
 import cssSource from './index.css?raw'
-import type { ReaderFixture, Token } from './domain/types'
+import type { ReaderFixture, ReaderPageMap, Token } from './domain/types'
 
 const readerFixture = JSON.parse(readFileSync(`${process.cwd()}/public/data/fixtures/szwejk-mini/reader-fixture.json`, 'utf8')) as ReaderFixture
-const response = new Response(JSON.stringify(readerFixture), { status: 200, headers: { 'content-type': 'application/json' } })
+const latexPageMap = JSON.parse(readFileSync(`${process.cwd()}/public/data/fixtures/szwejk-mini/page-map-latex-v13-volume-1.json`, 'utf8')) as ReaderPageMap
+const fixtureResponse = () => new Response(JSON.stringify(readerFixture), { status: 200, headers: { 'content-type': 'application/json' } })
+const pageMapResponse = () => new Response(JSON.stringify(latexPageMap), { status: 200, headers: { 'content-type': 'application/json' } })
 
 async function findVisibleTargetToken(user: ReturnType<typeof userEvent.setup>, maxPages = 20): Promise<HTMLElement> {
   for (let page = 0; page < maxPages; page += 1) {
@@ -43,7 +45,14 @@ describe('App', () => {
   beforeEach(() => {
     localStorage.clear()
     window.history.pushState({}, '', '/')
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response.clone()))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.includes('page-map-latex-v13-volume-1.json')) return Promise.resolve(pageMapResponse())
+        return Promise.resolve(fixtureResponse())
+      }),
+    )
   })
 
   it('shows a public library and opens a book-like reader page', async () => {
@@ -98,7 +107,7 @@ describe('App', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
 
-    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('134')
+    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('115')
   })
 
   it('loads the whole first volume from v13 plan and full hierarchical alignment artifacts', () => {
@@ -162,7 +171,9 @@ describe('App', () => {
     expect(cssSource).toContain('--reader-line-height: 1.34;')
   })
 
-  it('paginates with an estimated line budget instead of raw character capacity', () => {
+  it('prefers LaTeX-derived page-map pagination with estimated pagination as fallback', () => {
+    expect(appSource).toContain('loadLatexPageMap')
+    expect(appSource).toContain('buildReaderPagesFromPageMap')
     expect(paginationSource).toContain('export const PAGE_LINE_CAPACITY')
     expect(paginationSource).toContain('function estimateTextLineCost')
     expect(appSource).not.toContain('const PAGE_CHAR_CAPACITY')

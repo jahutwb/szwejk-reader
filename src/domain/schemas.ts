@@ -1,4 +1,4 @@
-import type { Candidate, Chapter, Paragraph, ReaderFixture, RenderSegment, Token, Volume, Work } from './types'
+import type { Candidate, Chapter, Paragraph, ReaderFixture, ReaderPageLocation, ReaderPageMap, ReaderPageMapEntry, RenderSegment, Token, Volume, Work } from './types'
 
 export type ValidationResult<T> = { ok: true; data: T } | { ok: false; errors: string[] }
 
@@ -146,6 +146,59 @@ export function parseReaderFixture(input: unknown): ReaderFixture {
   const result = validateReaderFixture(input)
   if (!result.ok) {
     throw new Error(`Invalid reader fixture: ${result.errors.join('; ')}`)
+  }
+  return result.data
+}
+
+function validatePageLocation(value: unknown, path: string, errors: string[]): value is ReaderPageLocation {
+  if (!isRecord(value)) {
+    errors.push(`${path} must be an object`)
+    return false
+  }
+  if (!isNonEmptyString(value.chapterId)) errors.push(`${path}.chapterId is required`)
+  if (!isNonEmptyString(value.paragraphId)) errors.push(`${path}.paragraphId is required`)
+  if (typeof value.charOffset !== 'number' || value.charOffset < 0) errors.push(`${path}.charOffset must be a non-negative number`)
+  return isNonEmptyString(value.chapterId) && isNonEmptyString(value.paragraphId)
+}
+
+function validatePageMapEntry(value: unknown, path: string, errors: string[]): value is ReaderPageMapEntry {
+  if (!isRecord(value)) {
+    errors.push(`${path} must be an object`)
+    return false
+  }
+  if (!isNonEmptyString(value.id)) errors.push(`${path}.id is required`)
+  if (typeof value.pdfPageNumber !== 'number' || value.pdfPageNumber < 1) errors.push(`${path}.pdfPageNumber must be a positive number`)
+  if (value.displayPageNumber !== undefined && typeof value.displayPageNumber !== 'number') {
+    errors.push(`${path}.displayPageNumber must be a number`)
+  }
+  validatePageLocation(value.start, `${path}.start`, errors)
+  validatePageLocation(value.end, `${path}.end`, errors)
+  return isNonEmptyString(value.id)
+}
+
+export function validateReaderPageMap(input: unknown): ValidationResult<ReaderPageMap> {
+  const errors: string[] = []
+  if (!isRecord(input)) {
+    return { ok: false, errors: ['page map must be an object'] }
+  }
+  if (!isRecord(input.metadata)) {
+    errors.push('metadata must be an object')
+  } else if (!isNonEmptyString(input.metadata.source)) {
+    errors.push('metadata.source is required')
+  }
+  if (!Array.isArray(input.pages)) {
+    errors.push('pages must be an array')
+  } else {
+    input.pages.forEach((page, index) => validatePageMapEntry(page, `pages[${index}]`, errors))
+  }
+  if (errors.length > 0) return { ok: false, errors }
+  return { ok: true, data: input as unknown as ReaderPageMap }
+}
+
+export function parseReaderPageMap(input: unknown): ReaderPageMap {
+  const result = validateReaderPageMap(input)
+  if (!result.ok) {
+    throw new Error(`Invalid reader page map: ${result.errors.join('; ')}`)
   }
   return result.data
 }

@@ -4,9 +4,9 @@ Webowa aplikacja czytelnicza dla hybrydowego wydania PL -> CS "Dobrego wojaka Sz
 
 ## Status
 
-Aktualny etap: MVP-0. Istnieje działająca aplikacja Vite + React + TypeScript z fixture'em prawdziwego Tomu I, biblioteczką, publicznym widokiem czytnika, klikaniem słów, lokalną telemetryką i ukrytym trybem debug/admin.
+Aktualny etap: MVP-0. Istnieje działająca aplikacja Vite + React + TypeScript z fixture'em prawdziwego Tomu I, publicznym widokiem czytnika, klikaniem słów, lokalną telemetryką, mapą stron wyprowadzoną z renderu LaTeX/PDF i ukrytym trybem debug/admin.
 
-To nadal nie jest finalny czytnik książkowy. Obecna paginacja jest prosta i przybliżona, tylko po to, żeby wymusić kierunek UX: jedna strona/obszar czytania na ekranie, bez scrollowania tekstu głównego. Pełny edytor alignmentu, konta użytkowników i płatności są poza zakresem MVP-0.
+To nadal nie jest finalny czytnik książkowy. Obecny podział na strony korzysta z mapy granic stron odtworzonej z renderowanego PDF-a Tomu I, ale tekst, stabilne ID, tokeny, kandydaci i przypisy nadal pochodzą ze strukturalnego JSON fixture. Pełny edytor alignmentu, konta użytkowników i płatności są poza zakresem MVP-0.
 
 ## Uruchomienie
 
@@ -29,6 +29,7 @@ Dev server domyślnie startuje na `http://127.0.0.1:5173/`.
 MVP-0 ładuje cały Tom I jako wygenerowany fixture, ale nie kopiuje pełnych 100-300 MB artefaktów hybrydyzera. Fixture jest w:
 
 - `public/data/fixtures/szwejk-mini/reader-fixture.json` - renderowalny fixture Tomu I wygenerowany skryptem `scripts/extract-fixture.py`.
+- `public/data/fixtures/szwejk-mini/page-map-latex-v13-volume-1.json` - mapa granic stron Tomu I odtworzona skryptem `scripts/extract-latex-page-map.py` z renderowanego PDF-a LaTeX. PDF jest tu tylko dowodem layoutu, nie źródłem tekstu.
 
 Źródła fixture'a to aktualny wskazany wariant v13:
 
@@ -64,7 +65,7 @@ Aplikacja zawiera:
 - ekran czytania Tomu I z prawdziwego planu hybrydyzacji,
 - książkową ramę strony o wysokości ekranu,
 - prostą nawigację poprzednia/następna strona,
-- prostą paginację, która może rozdzielać długie akapity między strony,
+- podział na strony według mapy z renderu LaTeX/PDF, z fallbackiem do prostej paginacji tekstowej,
 - przypisy na dole aktualnej strony, jeśli widoczne intro ma powiązany przypis,
 - zapis ostatniego klikniętego tokena jako pozycji czytania w `localStorage`.
 
@@ -74,7 +75,7 @@ Skład jest zbliżany do renderu LaTeX z `hybrydyzer`: polski tekst używa `TeX 
 
 Interpunkcja jest odtwarzana z `segment.text` i offsetów tokenów. Renderer nie dokleja sztucznych spacji po tokenach.
 
-Podział na strony jest na razie przybliżony i tekstowy. Nie jest to jeszcze docelowa paginacja typograficzna ani zgodność 1:1 z PDF-em LaTeX.
+Podział na strony preferuje `page-map-latex-v13-volume-1.json`. Jeśli mapa nie załaduje się albo nie przejdzie walidacji, aplikacja spada do prostej paginacji tekstowej. Mapa nie rekonstruuje treści z PDF-a; wskazuje tylko, gdzie w osi PL/source zaczynają i kończą się strony według aktualnego renderu LaTeX.
 
 ## Kliknięcie tokena
 
@@ -138,7 +139,7 @@ npm run build
 
 ## Czego jeszcze nie ma
 
-- finalnej paginacji strona-po-stronie,
+- pełnej natywnej paginacji typograficznej w przeglądarce zgodnej 1:1 z TeX-em,
 - swipe na mobile,
 - publicznego formularza "Zgłoś poprawkę",
 - pełnego edytora alignmentu,

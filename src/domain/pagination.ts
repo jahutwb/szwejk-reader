@@ -1,10 +1,12 @@
-import type { Chapter, Footnote, Paragraph, RenderSegment } from './types'
+import type { Chapter, Footnote, Paragraph, ReaderPageMap, RenderSegment } from './types'
 
 export type ReaderPage = {
   id: string
   chapterId: string
   chapterTitle: string
   isChapterOpening: boolean
+  displayPageNumber?: number
+  pdfPageNumber?: number
   blocks: ReaderPageBlock[]
   footnotes: Footnote[]
 }
@@ -234,4 +236,68 @@ export function buildReaderPages(chapters: Chapter[]): ReaderPage[] {
   }
 
   return pages
+}
+
+export function buildReaderPagesFromPageMap(chapters: Chapter[], pageMap: ReaderPageMap): ReaderPage[] {
+  const chapterById = new Map(chapters.map((chapter) => [chapter.id, chapter]))
+  const paragraphOrder = new Map<string, { chapter: Chapter; paragraph: Paragraph; order: number }>()
+  const seenChapterIds = new Set<string>()
+  let order = 0
+  for (const chapter of chapters) {
+    for (const paragraph of chapter.paragraphs) {
+      paragraphOrder.set(paragraph.id, { chapter, paragraph, order })
+      order += 1
+    }
+  }
+
+  const pages: ReaderPage[] = []
+  for (const entry of pageMap.pages) {
+    const startRecord = paragraphOrder.get(entry.start.paragraphId)
+    const endRecord = paragraphOrder.get(entry.end.paragraphId)
+    if (!startRecord || !endRecord || startRecord.order > endRecord.order) continue
+    const blocks: ReaderPageBlock[] = []
+    for (const record of paragraphOrder.values()) {
+      if (record.order < startRecord.order || record.order > endRecord.order) continue
+      const segment = getReaderSegment(record.paragraph)
+      if (!segment) continue
+      const sliceStart = record.order === startRecord.order ? entry.start.charOffset : 0
+      const sliceEnd = record.order === endRecord.order ? entry.end.charOffset : segment.text.length
+      if (sliceEnd <= sliceStart) continue
+      blocks.push({
+        id: `${record.paragraph.id}:latex-page:${entry.pdfPageNumber}:${sliceStart}:${sliceEnd}`,
+        paragraph: sliceParagraph(record.paragraph, sliceStart, sliceEnd),
+        continuation: sliceStart > 0,
+      })
+    }
+    if (blocks.length === 0) continue
+    const chapter = chapterById.get(entry.start.chapterId) ?? startRecord.chapter
+    const isChapterOpening = !seenChapterIds.has(chapter.id)
+    seenChapterIds.add(chapter.id)
+    pages.push({
+      id: entry.id,
+      chapterId: chapter.id,
+      chapterTitle: chapter.title,
+      isChapterOpening,
+      displayPageNumber: entry.displayPageNumber,
+      pdfPageNumber: entry.pdfPageNumber,
+      blocks,
+      footnotes: collectPageFootnotesForBlocks(chapter, blocks),
+    })
+  }
+
+  return pages.length > 0 ? pages : buildReaderPages(chapters)
+}
+
+function collectPageFootnotesForBlocks(chapter: Chapter, blocks: ReaderPageBlock[]): Footnote[] {
+  const footnoteById = new Map(chapter.footnotes.map((footnote) => [footnote.id, footnote]))
+  const seen = new Set<string>()
+  const footnotes: Footnote[] = []
+  for (const block of blocks) {
+    for (const footnote of collectBlockFootnotes(block, footnoteById)) {
+      if (seen.has(footnote.id)) continue
+      seen.add(footnote.id)
+      footnotes.push(footnote)
+    }
+  }
+  return footnotes
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { PAGE_LINE_CAPACITY, buildReaderPages, estimatePageLineCost } from './pagination'
-import type { Chapter, Paragraph, Token } from './types'
+import { PAGE_LINE_CAPACITY, buildReaderPages, buildReaderPagesFromPageMap, estimatePageLineCost } from './pagination'
+import type { Chapter, Paragraph, ReaderPageMap, Token } from './types'
 
 function makeParagraph(id: string, wordCount: number, footnoteId?: string): Paragraph {
   const words = Array.from({ length: wordCount }, (_, index) => `w${index}`)
@@ -124,5 +124,45 @@ describe('reader pagination', () => {
     const longSlicePage = pages.find((page) => page.blocks.some((block) => block.paragraph.id === 'long-slice'))
 
     expect(longSlicePage ? estimatePageLineCost(longSlicePage) : 0).toBeLessThanOrEqual(26)
+  })
+
+  it('uses LaTeX page-map character ranges when they are available', () => {
+    const chapter: Chapter = {
+      id: 'chapter-with-map',
+      title: 'Chapter with map',
+      paragraphs: [makeParagraphFromWords('p-1', ['Alpha', 'bravo', 'charlie']), makeParagraphFromWords('p-2', ['Delta', 'echo', 'foxtrot'])],
+      candidates: [],
+      footnotes: [],
+      glossary: [],
+    }
+    const pageMap: ReaderPageMap = {
+      metadata: {
+        source: 'latex_pdf_bbox',
+        workId: 'work-szwejk',
+        volumeId: 'volume-1',
+      },
+      pages: [
+        {
+          id: 'latex-page-1',
+          pdfPageNumber: 7,
+          displayPageNumber: 3,
+          start: { chapterId: 'chapter-with-map', paragraphId: 'p-1', charOffset: 0 },
+          end: { chapterId: 'chapter-with-map', paragraphId: 'p-1', charOffset: 11 },
+        },
+        {
+          id: 'latex-page-2',
+          pdfPageNumber: 8,
+          displayPageNumber: 4,
+          start: { chapterId: 'chapter-with-map', paragraphId: 'p-1', charOffset: 12 },
+          end: { chapterId: 'chapter-with-map', paragraphId: 'p-2', charOffset: 18 },
+        },
+      ],
+    }
+
+    const pages = buildReaderPagesFromPageMap([chapter], pageMap)
+
+    expect(pages.map((page) => page.displayPageNumber)).toEqual([3, 4])
+    expect(pages[0].blocks.map((block) => block.paragraph.segments[0].text)).toEqual(['Alpha bravo'])
+    expect(pages[1].blocks.map((block) => block.paragraph.segments[0].text)).toEqual(['charlie', 'Delta echo foxtrot'])
   })
 })

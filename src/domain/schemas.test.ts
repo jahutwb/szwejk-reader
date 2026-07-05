@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validateReaderFixture } from './schemas'
+import { validateReaderFixture, validateReaderPageMap } from './schemas'
 
 const validFixture = {
   work: {
@@ -56,6 +56,41 @@ describe('validateReaderFixture', () => {
     invalid.work.id = ''
 
     const result = validateReaderFixture(invalid)
+
+    expect(result.ok).toBe(false)
+  })
+})
+
+describe('validateReaderPageMap', () => {
+  it('accepts a minimal LaTeX-derived page map', () => {
+    const result = validateReaderPageMap({
+      metadata: { source: 'latex_pdf_bbox', workId: 'work-szwejk', volumeId: 'volume-1' },
+      pages: [
+        {
+          id: 'latex-page-1',
+          pdfPageNumber: 7,
+          displayPageNumber: 3,
+          start: { chapterId: 'ch-001', paragraphId: 'p-1', charOffset: 0 },
+          end: { chapterId: 'ch-001', paragraphId: 'p-1', charOffset: 24 },
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(true)
+  })
+
+  it('rejects page maps without stable page ids', () => {
+    const result = validateReaderPageMap({
+      metadata: { source: 'latex_pdf_bbox' },
+      pages: [
+        {
+          id: '',
+          pdfPageNumber: 7,
+          start: { chapterId: 'ch-001', paragraphId: 'p-1', charOffset: 0 },
+          end: { chapterId: 'ch-001', paragraphId: 'p-1', charOffset: 24 },
+        },
+      ],
+    })
 
     expect(result.ok).toBe(false)
   })

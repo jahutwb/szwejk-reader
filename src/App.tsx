@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { BookOpen, Bug, ChevronLeft, ChevronRight, Download, Lock, Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { loadMiniFixture } from '@/data/fixture'
-import { buildReaderPages, getReaderSegment } from '@/domain/pagination'
+import { loadLatexPageMap, loadMiniFixture } from '@/data/fixture'
+import { buildReaderPages, buildReaderPagesFromPageMap, getReaderSegment } from '@/domain/pagination'
 import { findSmallestCandidateForToken } from '@/domain/selection'
 import { splitTokenTextParts } from '@/domain/textSegments'
-import type { Candidate, Chapter, Footnote, Paragraph, ReaderFixture, ReaderOverride, Token, Volume } from '@/domain/types'
+import type { Candidate, Chapter, Footnote, Paragraph, ReaderFixture, ReaderOverride, ReaderPageMap, Token, Volume } from '@/domain/types'
 import { logCorrectionEvent, logWordClick, submitOverrides } from '@/telemetry/telemetry'
 import { cn } from '@/lib/utils'
 
@@ -112,6 +112,7 @@ function App() {
   const [overrides, setOverrides] = useState<ReaderOverride[]>(() => readOverrides())
   const [currentLocation, setCurrentLocation] = useState<ReaderProgress | null>(() => readProgress())
   const [currentPageIndex, setCurrentPageIndex] = useState(0)
+  const [pageMap, setPageMap] = useState<ReaderPageMap | null>(null)
   const [tocOpen, setTocOpen] = useState(false)
 
   const debugMode = useMemo(() => getDebugMode(), [])
@@ -120,7 +121,10 @@ function App() {
   const availableChapters = useMemo(() => getAvailableChapters(fixture), [fixture])
   const firstChapter = availableChapters[0]
   const chapterById = useMemo(() => new Map(availableChapters.map((chapter) => [chapter.id, chapter])), [availableChapters])
-  const pages = useMemo(() => buildReaderPages(availableChapters), [availableChapters])
+  const pages = useMemo(
+    () => (pageMap ? buildReaderPagesFromPageMap(availableChapters, pageMap) : buildReaderPages(availableChapters)),
+    [availableChapters, pageMap],
+  )
   const resolvedPageIndex = useMemo(() => {
     if (pages.length === 0) return 0
     const segmentId = currentLocation?.segmentId
@@ -149,6 +153,21 @@ function App() {
       .catch((error: unknown) => {
         if (!alive) return
         setLoadError(error instanceof Error ? error.message : String(error))
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    loadLatexPageMap()
+      .then((loaded) => {
+        if (!alive) return
+        setPageMap(loaded)
+      })
+      .catch((error: unknown) => {
+        console.warn('Failed to load LaTeX page map', error)
       })
     return () => {
       alive = false
@@ -383,7 +402,7 @@ function App() {
                 Poprzednia
               </Button>
               <span className="reader-page-number tabular-nums" data-testid="reader-page-number">
-                {resolvedPageIndex + 1}
+                {currentPage?.displayPageNumber ?? resolvedPageIndex + 1}
               </span>
               <Button variant="ghost" size="sm" onClick={() => goToPage(resolvedPageIndex + 1)} disabled={!canGoForward} aria-label="Następna strona">
                 Następna

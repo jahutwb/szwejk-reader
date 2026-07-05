@@ -14,6 +14,32 @@ export interface ReaderFixture {
   work: Work
 }
 
+export interface ReaderPageMap {
+  metadata: {
+    source: string
+    workId?: string
+    volumeId?: string
+    pdfPath?: string
+    generatedAt?: string
+    [key: string]: unknown
+  }
+  pages: ReaderPageMapEntry[]
+}
+
+export interface ReaderPageMapEntry {
+  id: string
+  pdfPageNumber: number
+  displayPageNumber?: number
+  start: ReaderPageLocation
+  end: ReaderPageLocation
+}
+
+export interface ReaderPageLocation {
+  chapterId: string
+  paragraphId: string
+  charOffset: number
+}
+
 export interface Work {
   id: string
   slug: string
