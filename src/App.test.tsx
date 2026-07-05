@@ -98,7 +98,7 @@ describe('App', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
 
-    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('121')
+    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('134')
   })
 
   it('loads the whole first volume from v13 plan and full hierarchical alignment artifacts', () => {

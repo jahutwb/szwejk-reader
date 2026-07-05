@@ -15,8 +15,8 @@ export type ReaderPageBlock = {
   continuation: boolean
 }
 
-export const ESTIMATED_CHARS_PER_LINE = 56
-export const PAGE_LINE_CAPACITY = 27
+export const ESTIMATED_CHARS_PER_LINE = 50
+export const PAGE_LINE_CAPACITY = 26
 export const MIN_TRAILING_PAGE_LINES = 4
 export const CHAPTER_TITLE_LINE_COST = 5
 
