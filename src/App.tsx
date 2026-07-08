@@ -41,6 +41,12 @@ type ReaderProgress = {
 
 const FIXTURE_VOLUME_ID = 'volume-1'
 const WORK_TITLE = 'Przygody dobrego wojaka Szwejka podczas wojny światowej'
+const VOLUME_TITLE_LINES: Record<string, [string, string]> = {
+  'volume-1': ['Tom I', 'Szwejk na tyłach'],
+  'volume-2': ['Tom II', 'Szwejk na froncie'],
+  'volume-3': ['Tom III', 'Przesławne lanie'],
+  'volume-4': ['Tom IV', 'Po przesławnym laniu'],
+}
 const PROGRESS_KEY = 'szwejk-reader.progress'
 const OVERRIDES_KEY = 'szwejk-reader.overrides'
 const MEASURE_MAX_PAGES = 1200
@@ -571,9 +577,6 @@ function App() {
             Czytaj polski tekst, który stopniowo przechodzi w czeski. Klikaj trudniejsze słowa, żeby zobaczyć równoległy fragment.
           </p>
           <div className="library-actions">
-            <Button onClick={openReader} disabled={!fixture || !firstChapter}>
-              Czytaj tom I
-            </Button>
             <Button asChild variant="outline">
               <a href="#library-about">O projekcie</a>
             </Button>
@@ -1368,9 +1371,10 @@ function VolumeTile({
 }) {
   const locked = volume.status !== 'available'
   const statusLabel = locked ? 'w przygotowaniu' : `${progressPercent}% przeczytane`
-  const coverLabel = locked ? 'w przygotowaniu' : 'czytaj za darmo'
+  const coverLabel = locked ? '' : 'czytaj za darmo'
   const actionLabel = locked ? 'w przygotowaniu' : 'Czytaj'
-  const ariaLabel = locked ? `${volume.label}, w przygotowaniu` : `${volume.label}, czytaj za darmo, ${progressPercent}% przeczytane`
+  const [volumeLabel, partLabel] = VOLUME_TITLE_LINES[volume.id] ?? [volume.label, '']
+  const ariaLabel = locked ? `${volume.label}, ${partLabel}, w przygotowaniu` : `${volume.label}, ${partLabel}, czytaj za darmo, ${progressPercent}% przeczytane`
 
   return (
     <button
@@ -1384,9 +1388,9 @@ function VolumeTile({
     >
       <span className="volume-cover-frame">
         <img className="volume-cover-image" src={coverSrc} alt="" loading={volume.id === FIXTURE_VOLUME_ID ? 'eager' : 'lazy'} />
-        <span className={cn('volume-cover-chip', locked ? 'volume-cover-chip-muted' : 'volume-cover-chip-active')}>
+        <span className={cn('volume-cover-chip', locked ? 'volume-cover-chip-muted' : 'volume-cover-chip-active')} aria-hidden="true">
           {locked ? <Lock className="h-3.5 w-3.5" /> : null}
-          <span>{coverLabel}</span>
+          {!locked ? <span>{coverLabel}</span> : null}
         </span>
         {!locked ? (
           <span className="volume-progress-badge" data-testid={`volume-progress-${volume.id}`}>
@@ -1395,12 +1399,17 @@ function VolumeTile({
         ) : null}
       </span>
       <span className="volume-card-copy">
-        <span className="volume-card-title">{volume.label}</span>
-        <span className="volume-card-status">{statusLabel}</span>
-        <span className="volume-card-action">
-          {actionLabel}
-          {!locked ? <ChevronRight className="h-4 w-4" /> : null}
+        <span className="volume-card-title-group">
+          <span className="volume-card-title">{volumeLabel}</span>
+          <span className="volume-card-subtitle">{partLabel}</span>
         </span>
+        <span className="volume-card-status">{statusLabel}</span>
+        {!locked ? (
+          <span className="volume-card-action">
+            {actionLabel}
+            <ChevronRight className="h-4 w-4" />
+          </span>
+        ) : null}
       </span>
     </button>
   )

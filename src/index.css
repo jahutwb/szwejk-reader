@@ -327,6 +327,11 @@ textarea {
   padding: 0.95rem 0.95rem 1.05rem;
 }
 
+.volume-card-title-group {
+  display: grid;
+  gap: 0.15rem;
+}
+
 .volume-card-title {
   display: block;
   margin: 0;
@@ -334,6 +339,14 @@ textarea {
   font-size: 1.12rem;
   font-weight: 700;
   line-height: 1.12;
+}
+
+.volume-card-subtitle {
+  display: block;
+  color: hsl(220 11% 30%);
+  font-family: var(--library-serif);
+  font-size: 0.98rem;
+  line-height: 1.18;
 }
 
 .volume-card-status {

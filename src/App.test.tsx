@@ -16,12 +16,8 @@ const workTitle = 'Przygody dobrego wojaka Szwejka podczas wojny światowej'
 const fixtureResponse = () => new Response(JSON.stringify(readerFixture), { status: 200, headers: { 'content-type': 'application/json' } })
 const pageMapResponse = () => new Response(JSON.stringify(latexPageMap), { status: 200, headers: { 'content-type': 'application/json' } })
 
-function getHeroReadButton(): HTMLElement {
-  return screen.getByRole('button', { name: /czytaj tom i/i })
-}
-
 function getVolumeOneReaderButton(): HTMLElement {
-  return screen.getByRole('button', { name: /tom i, czytaj za darmo, \d+% przeczytane/i })
+  return screen.getByRole('button', { name: /tom i, szwejk na tyłach, czytaj za darmo, \d+% przeczytane/i })
 }
 
 async function findVisibleTargetToken(user: ReturnType<typeof userEvent.setup>, maxPages = 20): Promise<HTMLElement> {
@@ -69,13 +65,11 @@ describe('App', () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { name: workTitle })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /czytaj tom i/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /o projekcie/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /tom i, czytaj za darmo, 0% przeczytane/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /tom ii, w przygotowaniu/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /tom i, szwejk na tyłach, czytaj za darmo, 0% przeczytane/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tom ii, szwejk na froncie, w przygotowaniu/i })).toBeDisabled()
 
-    await waitFor(() => expect(getHeroReadButton()).not.toBeDisabled())
-    await user.click(getHeroReadButton())
+    await user.click(getVolumeOneReaderButton())
 
     expect(await screen.findByTestId('reader-screen')).toBeInTheDocument()
     expect(screen.getByTestId('reader-page-frame')).toBeInTheDocument()
