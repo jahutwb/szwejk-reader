@@ -64,7 +64,7 @@ function findSliceEnd(segment: RenderSegment, start: number, lineCapacity: numbe
   return fallback?.end ?? textLength
 }
 
-function sliceParagraph(paragraph: Paragraph, start: number, end: number): Paragraph {
+export function sliceParagraph(paragraph: Paragraph, start: number, end: number): Paragraph {
   const segment = getReaderSegment(paragraph)
   if (!segment) return paragraph
   const text = segment.text.slice(start, end)
@@ -288,7 +288,7 @@ export function buildReaderPagesFromPageMap(chapters: Chapter[], pageMap: Reader
   return pages.length > 0 ? pages : buildReaderPages(chapters)
 }
 
-function collectPageFootnotesForBlocks(chapter: Chapter, blocks: ReaderPageBlock[]): Footnote[] {
+export function collectPageFootnotesForBlocks(chapter: Chapter, blocks: ReaderPageBlock[]): Footnote[] {
   const footnoteById = new Map(chapter.footnotes.map((footnote) => [footnote.id, footnote]))
   const seen = new Set<string>()
   const footnotes: Footnote[] = []

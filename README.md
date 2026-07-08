@@ -4,9 +4,11 @@ Webowa aplikacja czytelnicza dla hybrydowego wydania PL -> CS "Dobrego wojaka Sz
 
 ## Status
 
-Aktualny etap: MVP-0. Istnieje działająca aplikacja Vite + React + TypeScript z fixture'em prawdziwego Tomu I, publicznym widokiem czytnika, klikaniem słów, lokalną telemetryką, mapą stron wyprowadzoną z renderu LaTeX/PDF i ukrytym trybem debug/admin.
+Aktualny etap: MVP-0. Istnieje działająca aplikacja Vite + React + TypeScript z fixture'em prawdziwego Tomu I, publicznym widokiem czytnika, klikaniem słów, lokalną telemetryką, webową paginacją książkową i ukrytym trybem debug/admin.
 
-To nadal nie jest finalny czytnik książkowy. Obecny podział na strony korzysta z mapy granic stron odtworzonej z renderowanego PDF-a Tomu I, ale tekst, stabilne ID, tokeny, kandydaci i przypisy nadal pochodzą ze strukturalnego JSON fixture. Pełny edytor alignmentu, konta użytkowników i płatności są poza zakresem MVP-0.
+To nadal nie jest finalny czytnik książkowy. Publiczny podział na strony jest wyznaczany przez webowy layout przeglądarki, kalibrowany typografią i proporcjami do renderu LaTeX/PDF. Tekst, stabilne ID, tokeny, kandydaci i przypisy nadal pochodzą ze strukturalnego JSON fixture. Pełny edytor alignmentu, konta użytkowników i płatności są poza zakresem MVP-0.
+
+Dla kolejnych agentów najważniejszy dokument przekazania jest w `docs/agent-handoff.md`.
 
 ## Uruchomienie
 
@@ -29,7 +31,7 @@ Dev server domyślnie startuje na `http://127.0.0.1:5173/`.
 MVP-0 ładuje cały Tom I jako wygenerowany fixture, ale nie kopiuje pełnych 100-300 MB artefaktów hybrydyzera. Fixture jest w:
 
 - `public/data/fixtures/szwejk-mini/reader-fixture.json` - renderowalny fixture Tomu I wygenerowany skryptem `scripts/extract-fixture.py`.
-- `public/data/fixtures/szwejk-mini/page-map-latex-v13-volume-1.json` - mapa granic stron Tomu I odtworzona skryptem `scripts/extract-latex-page-map.py` z renderowanego PDF-a LaTeX. PDF jest tu tylko dowodem layoutu, nie źródłem tekstu.
+- `public/data/fixtures/szwejk-mini/page-map-latex-v13-volume-1.json` - referencyjna mapa granic stron Tomu I odtworzona skryptem `scripts/extract-latex-page-map.py` z renderowanego PDF-a LaTeX. PDF jest tu tylko dowodem layoutu i materiałem porównawczym, nie źródłem tekstu ani publicznej paginacji webowej.
 
 Źródła fixture'a to aktualny wskazany wariant v13:
 
@@ -65,17 +67,17 @@ Aplikacja zawiera:
 - ekran czytania Tomu I z prawdziwego planu hybrydyzacji,
 - książkową ramę strony o wysokości ekranu,
 - prostą nawigację poprzednia/następna strona,
-- podział na strony według mapy z renderu LaTeX/PDF, z fallbackiem do prostej paginacji tekstowej,
+- webowy podział na strony oparty o pomiar rzeczywistego layoutu strony w przeglądarce, z fallbackiem do prostej paginacji tekstowej,
 - przypisy na dole aktualnej strony, jeśli widoczne intro ma powiązany przypis,
 - zapis ostatniego klikniętego tokena jako pozycji czytania w `localStorage`.
 
 W normalnym trybie publicznym tekst czeski nie jest stale renderowany pod polskim akapitem. Czytelnik widzi tekst hybrydowy w stronie książkowej, a równoległy fragment pojawia się dopiero po kliknięciu słowa. Popover znika po kliknięciu poza nim.
 
-Skład jest zbliżany do renderu LaTeX z `hybrydyzer`: polski tekst używa `TeX Gyre Pagella`, czeskie podstawienia `TeX Gyre Heros`, akapity nie mają dodatkowego odstępu pionowego, a pierwszy wiersz ma książkowe wcięcie. Regulacja wielkości fontu została usunięta z publicznego UI.
+Skład jest zbliżany do renderu LaTeX z `hybrydyzer`: polski tekst używa osadzonego webfontu `TeX Gyre Pagella`, czeskie podstawienia używają `TeX Gyre Heros`, akapity nie mają dodatkowego odstępu pionowego, włączone jest polskie dzielenie wyrazów, a pierwszy wiersz ma książkowe wcięcie. Publiczna paginacja mierzy realną wysokość kartki, tytułu rozdziału i przypisów, żeby tekst wypełniał stronę bez narzucania PDF-owych offsetów na inne metryki webowe. Regulacja wielkości fontu została usunięta z publicznego UI.
 
 Interpunkcja jest odtwarzana z `segment.text` i offsetów tokenów. Renderer nie dokleja sztucznych spacji po tokenach.
 
-Podział na strony preferuje `page-map-latex-v13-volume-1.json`. Jeśli mapa nie załaduje się albo nie przejdzie walidacji, aplikacja spada do prostej paginacji tekstowej. Mapa nie rekonstruuje treści z PDF-a; wskazuje tylko, gdzie w osi PL/source zaczynają i kończą się strony według aktualnego renderu LaTeX.
+Podział na strony preferuje paginację mierzoną w DOM. Jeśli pomiar nie jest dostępny, aplikacja spada do prostej paginacji tekstowej. Mapa `page-map-latex-v13-volume-1.json` nie rekonstruuje treści z PDF-a i nie steruje publicznym podziałem webowych stron; zostaje jako referencja dla porównań z aktualnym renderem LaTeX.
 
 ## Kliknięcie tokena
 
@@ -91,6 +93,8 @@ Każdy renderowany token ma stabilne atrybuty DOM:
 
 Kliknięcie tokena w trybie publicznym pokazuje mały popover przy zaznaczonym słowie z równoległym fragmentem w drugim języku. Popover nie pokazuje technicznych etykiet typu `Czeski odpowiednik`. Jeżeli token ma hierarchię kandydatów, popover pokazuje małe kontrolki `-` / `+` do zmiany zakresu.
 
+Ten sam popover ma ikonę flagi. Kliknięcie flagi oznacza aktywną frazę jako `Do sprawdzenia` i dopiero wtedy rozwija opcjonalne pole krótkiej uwagi. Feedback zapisuje się jako kompaktowy `ReaderOverride` po stabilnych ID tokena, akapitu, rozdziału i kandydata.
+
 Pierwsze wprowadzenia nowych czeskich lematów są pogrubione punktowo na podstawie `intro_annotations`, nie przez regex ani przez pogrubienie całego podstawienia.
 
 Panel `Token debug`, `candidate_ids`, aktywny kandydat i eksport override'ów są dostępne wyłącznie w trybie debug:
@@ -99,24 +103,26 @@ Panel `Token debug`, `candidate_ids`, aktywny kandydat i eksport override'ów s�
 http://127.0.0.1:5173/?debug=1
 ```
 
-## Telemetryka i override'y
+## Telemetryka, feedback i override'y
 
-Telemetryka jest lokalna, niewidoczna dla czytelnika i fail-soft:
+Telemetryka i feedback są fail-soft:
 
 - `session_id` jest generowany anonimowo w `localStorage`,
 - `logWordClick` zapisuje kliknięcia tokenów do lokalnego bufora,
 - `logCorrectionEvent` zapisuje zdarzenia korekt,
-- `submitOverrides` buforuje override submissions i nie crashuje przy braku endpointu here.now.
+- `submitOverrides` buforuje override submissions i nie crashuje przy braku endpointu here.now,
+- publiczny feedback tokena zapisuje lokalny `ReaderOverride[]` pod `szwejk-reader.overrides`,
+- po publikacji na owned here.now Site próbuje wysłać kompaktowy rekord do `./.herenow/data/override_submissions`.
 
 Eksport aktualnych `ReaderOverride[]` przyciskiem `Pobierz moje poprawki JSON` jest funkcją admin/dev i jest widoczny tylko pod `?debug=1`.
 
-Szkic manifestu Site Data jest w `.herenow/data.json` i obejmuje kolekcje:
+Manifest Site Data jest w `.herenow/data.json` oraz w `public/.herenow/data.json`, żeby build Vite przeniósł go do `dist/`. Obejmuje kolekcje:
 
 - `word_clicks`,
 - `correction_events`,
 - `override_submissions`.
 
-Manifest jest oznaczony jako szkic i wymaga weryfikacji z aktualną dokumentacją here.now przed publikacją.
+Publiczny insert jest włączony, a odczyt, aktualizacja i usuwanie pozostają owner-only. Site Data zacznie działać dopiero po publikacji jako strona przypisana do konta here.now; anonimowa publikacja bez claimu nie zapisze rekordów serwerowo.
 
 ## Relacja do `hybrydyzer`
 
@@ -141,9 +147,9 @@ npm run build
 
 - pełnej natywnej paginacji typograficznej w przeglądarce zgodnej 1:1 z TeX-em,
 - swipe na mobile,
-- publicznego formularza "Zgłoś poprawkę",
+- pełnego publicznego workflow korekt; jest tylko flaga tokena i opcjonalna uwaga zapisywana jako override,
 - pełnego edytora alignmentu,
 - pełnego ładowania tomów II-IV i całej książki,
-- integracji z prawdziwym here.now Site Data endpointem,
+- zweryfikowanej na żywo integracji z owned here.now Site Data endpointem,
 - płatności,
 - kont użytkowników.

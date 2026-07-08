@@ -25,10 +25,15 @@ DEFAULT_PDF = Path(
 DEFAULT_FIXTURE = Path("public/data/fixtures/szwejk-mini/reader-fixture.json")
 DEFAULT_OUTPUT = Path("public/data/fixtures/szwejk-mini/page-map-latex-v13-volume-1.json")
 MAIN_TEXT_Y_MAX = 480.0
+BODY_FULL_LINE_X_MAX = 320.0
+BODY_LEFT_X_MAX = 80.0
+TITLE_LEFT_X_MIN = 64.0
+TITLE_Y_MAX = 300.0
 MIN_PAGE_NORM_CHARS = 48
 ANCHOR_CHARS = 180
 MIN_ANCHOR_CHARS = 40
 SEARCH_BACKTRACK = 5000
+OPENING_PREFIX_CHARS = {"—", "–", "-", "„", "“", "«", "\"", "'", "(", "["}
 
 
 def normalize_text(text: str) -> str:
@@ -73,7 +78,7 @@ def extract_pdf_pages(pdf_path: Path) -> list[dict[str, Any]]:
     root = ET.fromstring(xml)
     pages: list[dict[str, Any]] = []
     for page_number, page in enumerate(root.findall(".//{*}page"), start=1):
-        lines: list[list[str]] = []
+        lines: list[dict[str, Any]] = []
         footer_words: list[str] = []
         for line in page.findall(".//{*}line"):
             y_max = float(line.attrib["yMax"])
@@ -85,12 +90,19 @@ def extract_pdf_pages(pdf_path: Path) -> list[dict[str, Any]]:
                 continue
             if y_max > MAIN_TEXT_Y_MAX:
                 continue
-            lines.append(words)
+            lines.append(
+                {
+                    "x_min": float(line.attrib["xMin"]),
+                    "x_max": float(line.attrib["xMax"]),
+                    "y_max": y_max,
+                    "words": words,
+                }
+            )
         pages.append(
             {
                 "pdf_page_number": page_number,
                 "display_page_number": extract_display_page_number(footer_words),
-                "text": join_pdf_lines(lines),
+                "text": join_pdf_lines(drop_opening_title_lines(lines)),
             }
         )
     return pages
@@ -103,9 +115,25 @@ def extract_display_page_number(words: list[str]) -> int | None:
     return None
 
 
-def join_pdf_lines(lines: list[list[str]]) -> str:
+def drop_opening_title_lines(lines: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    body_start_index: int | None = None
+    for index, line in enumerate(lines):
+        if line["x_min"] < BODY_LEFT_X_MAX and line["x_max"] > BODY_FULL_LINE_X_MAX:
+            body_start_index = index
+            break
+    if not body_start_index:
+        return lines
+
+    opening_lines = lines[:body_start_index]
+    if all(line["x_min"] > TITLE_LEFT_X_MIN and line["x_max"] < BODY_FULL_LINE_X_MAX and line["y_max"] < TITLE_Y_MAX for line in opening_lines):
+        return lines[body_start_index:]
+    return lines
+
+
+def join_pdf_lines(lines: list[dict[str, Any]]) -> str:
     parts: list[str] = []
-    for words in lines:
+    for line_record in lines:
+        words = line_record["words"]
         line = " ".join(words)
         if parts and parts[-1].endswith("-"):
             parts[-1] = parts[-1][:-1] + line
@@ -137,10 +165,26 @@ def find_page_start(page_norm: str, fixture_norm: str, cursor: int) -> int | Non
 def make_location(paragraphs: list[dict[str, Any]], mapping: list[tuple[int, int]], norm_offset: int, *, end: bool) -> dict[str, Any]:
     paragraph_index, char_offset = mapping[norm_offset]
     paragraph = paragraphs[paragraph_index]
+    text = paragraph["text"]
+    if end:
+        char_offset += 1
+        while char_offset < len(text) and not text[char_offset].isalpha() and not text[char_offset].isspace():
+            char_offset += 1
+    else:
+        while char_offset > 0:
+            previous = text[char_offset - 1]
+            previous_previous = text[char_offset - 2] if char_offset > 1 else ""
+            if previous in OPENING_PREFIX_CHARS:
+                char_offset -= 1
+                continue
+            if previous.isspace() and previous_previous in OPENING_PREFIX_CHARS:
+                char_offset -= 1
+                continue
+            break
     return {
         "chapterId": paragraph["chapter_id"],
         "paragraphId": paragraph["paragraph_id"],
-        "charOffset": char_offset + (1 if end else 0),
+        "charOffset": char_offset,
     }
 
 

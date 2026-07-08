@@ -2,6 +2,7 @@ import type { CorrectionEvent, ReaderOverride, OverrideSubmissionEvent, WordClic
 
 const SESSION_KEY = 'szwejk-reader.session-id'
 const BUFFER_KEY = 'szwejk-reader.telemetry-buffer'
+const OVERRIDE_SCHEMA_VERSION = 'reader-overrides-v1'
 
 type SubmitResult = { ok: true; queued: boolean } | { ok: false; queued: true; error?: string }
 
@@ -24,6 +25,20 @@ type CorrectionInput = {
   eventType: string
   candidateId?: string
   tokenId?: string
+}
+
+type OverrideSubmissionRecord = {
+  session_id: string
+  created_at_client: string
+  work_id?: string
+  volume_id?: string
+  chapter_id?: string
+  base_artifact_id?: string
+  override_patch_id?: string
+  pl_location_range?: Record<string, string | undefined>
+  operations: unknown[]
+  operation_count: number
+  client_schema_version: string
 }
 
 const nowIso = () => new Date().toISOString()
@@ -78,6 +93,39 @@ function enqueue(collection: string, payload: unknown): void {
   items.push(record)
   writeBuffer(items)
   console.debug('szwejk-reader telemetry', record)
+}
+
+function createOverrideSubmissionRecord(event: OverrideSubmissionEvent, overrides: ReaderOverride[]): OverrideSubmissionRecord {
+  const first = overrides[0]
+  const firstOperation = first?.operations[0]
+  const operations = overrides.flatMap((override) =>
+    override.operations.map((operation) => ({
+      ...operation,
+      overrideId: override.id,
+      createdAt: override.createdAt,
+    })),
+  )
+
+  return {
+    session_id: event.session_id,
+    created_at_client: event.created_at_client,
+    work_id: first?.workId,
+    volume_id: first?.volumeId,
+    chapter_id: first?.chapterId,
+    base_artifact_id: first?.baseArtifactId,
+    override_patch_id: first?.id,
+    pl_location_range: firstOperation
+      ? {
+          chapter_id: first?.chapterId,
+          paragraph_id: firstOperation.paragraphId,
+          token_id: firstOperation.tokenId,
+          candidate_id: firstOperation.candidateId,
+        }
+      : undefined,
+    operations,
+    operation_count: operations.length,
+    client_schema_version: OVERRIDE_SCHEMA_VERSION,
+  }
 }
 
 export function logWordClick(input: WordClickInput): WordClickEvent {
@@ -143,7 +191,7 @@ export async function submitOverrides(
         'content-type': 'application/json',
         'idempotency-key': `${event.session_id}-${event.created_at_client}`,
       },
-      body: JSON.stringify(event),
+      body: JSON.stringify(createOverrideSubmissionRecord(event, overrides)),
     })
     if (!response.ok) return { ok: false, queued: true }
     return { ok: true, queued: false }

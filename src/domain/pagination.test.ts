@@ -165,4 +165,43 @@ describe('reader pagination', () => {
     expect(pages[0].blocks.map((block) => block.paragraph.segments[0].text)).toEqual(['Alpha bravo'])
     expect(pages[1].blocks.map((block) => block.paragraph.segments[0].text)).toEqual(['charlie', 'Delta echo foxtrot'])
   })
+
+  it('does not synthesize a hyphen when a reference page map slices a word in the middle', () => {
+    const chapter: Chapter = {
+      id: 'chapter-with-hyphenated-break',
+      title: 'Chapter with hyphenated break',
+      paragraphs: [makeParagraphFromWords('p-1', ['potem'])],
+      candidates: [],
+      footnotes: [],
+      glossary: [],
+    }
+    const pageMap: ReaderPageMap = {
+      metadata: {
+        source: 'latex_pdf_bbox',
+        workId: 'work-szwejk',
+        volumeId: 'volume-1',
+      },
+      pages: [
+        {
+          id: 'latex-page-1',
+          pdfPageNumber: 9,
+          displayPageNumber: 5,
+          start: { chapterId: 'chapter-with-hyphenated-break', paragraphId: 'p-1', charOffset: 0 },
+          end: { chapterId: 'chapter-with-hyphenated-break', paragraphId: 'p-1', charOffset: 2 },
+        },
+        {
+          id: 'latex-page-2',
+          pdfPageNumber: 10,
+          displayPageNumber: 6,
+          start: { chapterId: 'chapter-with-hyphenated-break', paragraphId: 'p-1', charOffset: 2 },
+          end: { chapterId: 'chapter-with-hyphenated-break', paragraphId: 'p-1', charOffset: 5 },
+        },
+      ],
+    }
+
+    const pages = buildReaderPagesFromPageMap([chapter], pageMap)
+
+    expect(pages[0].blocks[0].paragraph.segments[0].text).toBe('po')
+    expect(pages[1].blocks[0].paragraph.segments[0].text).toBe('tem')
+  })
 })

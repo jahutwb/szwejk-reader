@@ -1,71 +1,70 @@
 {
-  "draft": true,
-  "note": "MVP-0 Site Data sketch. Verify against current here.now docs before publishing.",
   "collections": {
     "word_clicks": {
-      "description": "Anonymous token click telemetry for reader interaction analysis.",
       "access": {
         "insert": "public",
         "read": "owner",
         "update": "owner",
         "delete": "owner"
       },
+      "rateLimit": "120/hour/ip",
       "fields": {
-        "session_id": { "type": "string", "required": true },
-        "work_id": { "type": "string", "required": true },
-        "volume_id": { "type": "string", "required": true },
-        "chapter_id": { "type": "string", "required": true },
-        "paragraph_id": { "type": "string", "required": true },
-        "token_id": { "type": "string", "required": true },
-        "language": { "type": "string", "required": true },
-        "candidate_ids": { "type": "array", "items": { "type": "string" } },
-        "active_candidate_id": { "type": "string" },
-        "viewport": { "type": "string" },
+        "session_id": { "type": "string", "required": true, "maxLength": 96 },
+        "work_id": { "type": "string", "required": true, "maxLength": 96 },
+        "volume_id": { "type": "string", "required": true, "maxLength": 96 },
+        "chapter_id": { "type": "string", "required": true, "maxLength": 128 },
+        "paragraph_id": { "type": "string", "required": true, "maxLength": 256 },
+        "token_id": { "type": "string", "required": true, "maxLength": 256 },
+        "token_text": { "type": "string", "maxLength": 120 },
+        "language": { "type": "string", "required": true, "maxLength": 16 },
+        "candidate_ids": { "type": "array" },
+        "active_candidate_id": { "type": "string", "maxLength": 256 },
+        "viewport": { "type": "string", "maxLength": 24 },
         "font_size": { "type": "number" },
-        "created_at_client": { "type": "string", "required": true }
+        "created_at_client": { "type": "datetime", "required": true }
       }
     },
     "correction_events": {
-      "description": "Anonymous correction workflow events such as start, expand, shrink, accept, reject, and cancel.",
       "access": {
         "insert": "public",
         "read": "owner",
         "update": "owner",
         "delete": "owner"
       },
+      "rateLimit": "120/hour/ip",
       "fields": {
-        "session_id": { "type": "string", "required": true },
-        "work_id": { "type": "string", "required": true },
-        "volume_id": { "type": "string", "required": true },
-        "chapter_id": { "type": "string", "required": true },
-        "pl_location_id": { "type": "string" },
-        "token_id": { "type": "string" },
-        "candidate_id": { "type": "string" },
-        "event_type": { "type": "string", "required": true },
+        "session_id": { "type": "string", "required": true, "maxLength": 96 },
+        "work_id": { "type": "string", "required": true, "maxLength": 96 },
+        "volume_id": { "type": "string", "required": true, "maxLength": 96 },
+        "chapter_id": { "type": "string", "required": true, "maxLength": 128 },
+        "pl_location_id": { "type": "string", "maxLength": 256 },
+        "token_id": { "type": "string", "maxLength": 256 },
+        "candidate_id": { "type": "string", "maxLength": 256 },
+        "event_type": { "type": "string", "required": true, "maxLength": 64 },
         "patch_summary": { "type": "object" },
-        "created_at_client": { "type": "string", "required": true }
+        "created_at_client": { "type": "datetime", "required": true }
       }
     },
     "override_submissions": {
-      "description": "Compact chapter-level user override patches, never full book text.",
       "access": {
         "insert": "public",
         "read": "owner",
         "update": "owner",
         "delete": "owner"
       },
+      "rateLimit": "60/hour/ip",
       "fields": {
-        "session_id": { "type": "string", "required": true },
-        "work_id": { "type": "string" },
-        "volume_id": { "type": "string" },
-        "chapter_id": { "type": "string" },
-        "base_artifact_id": { "type": "string" },
-        "override_patch_id": { "type": "string" },
+        "session_id": { "type": "string", "required": true, "maxLength": 96 },
+        "work_id": { "type": "string", "maxLength": 96 },
+        "volume_id": { "type": "string", "maxLength": 96 },
+        "chapter_id": { "type": "string", "maxLength": 128 },
+        "base_artifact_id": { "type": "string", "maxLength": 256 },
+        "override_patch_id": { "type": "string", "maxLength": 128 },
         "pl_location_range": { "type": "object" },
-        "operations": { "type": "array" },
-        "operation_count": { "type": "number" },
-        "client_schema_version": { "type": "string" },
-        "created_at_client": { "type": "string", "required": true }
+        "operations": { "type": "array", "required": true },
+        "operation_count": { "type": "integer", "required": true, "minimum": 1 },
+        "client_schema_version": { "type": "string", "required": true, "maxLength": 64 },
+        "created_at_client": { "type": "datetime", "required": true }
       }
     }
   }

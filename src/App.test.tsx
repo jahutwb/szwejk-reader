@@ -107,7 +107,7 @@ describe('App', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
 
-    expect(await screen.findByTestId('reader-page-number')).toHaveTextContent('115')
+    expect(await screen.findByRole('button', { name: /spis treści: szwejk w garnizonie/i })).toBeInTheDocument()
   })
 
   it('loads the whole first volume from v13 plan and full hierarchical alignment artifacts', () => {
@@ -166,17 +166,90 @@ describe('App', () => {
     expect(within(pageFrame).queryByRole('heading', { name: /wstęp úvod/i })).not.toBeInTheDocument()
   })
 
-  it('uses larger long-form reader typography for screen reading', () => {
-    expect(cssSource).toContain('--reader-font-size: clamp(16px, 3.18cqw, 19px);')
-    expect(cssSource).toContain('--reader-line-height: 1.34;')
+  it('renders numbered chapter opening labels to match the LaTeX volume', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+
+    const pageFrame = await screen.findByTestId('reader-page-frame')
+    await user.click(within(pageFrame).getByRole('button', { name: /spis treści/i }))
+    await user.click(screen.getByRole('button', { name: /jak dobry wojak szwejk wkroczył/i }))
+
+    expect(pageFrame.querySelector('.chapter-title-label')).toHaveTextContent('ROZDZIAŁ')
+    expect(pageFrame.querySelector('.chapter-title-number')).toHaveTextContent('1')
   })
 
-  it('prefers LaTeX-derived page-map pagination with estimated pagination as fallback', () => {
-    expect(appSource).toContain('loadLatexPageMap')
-    expect(appSource).toContain('buildReaderPagesFromPageMap')
+  it('uses larger long-form reader typography for screen reading', () => {
+    expect(cssSource).toContain('--reader-font-size: clamp(15px, 3cqw, 17.5px);')
+    expect(cssSource).toContain('--reader-line-height: 1.34;')
+    expect(cssSource).toContain('hyphens: auto;')
+    expect(appSource).toContain("lang={segment.language === 'hybrid' ? 'pl' : segment.language}")
+    expect(cssSource).toContain('url("/fonts/tex-gyre/texgyrepagella-regular.otf")')
+    expect(cssSource).toContain('--reader-source-font: "TeX Gyre Pagella", "TeXGyrePagella"')
+    expect(cssSource).toContain('--reader-target-font: "TeX Gyre Heros", "TeXGyreHeros"')
+  })
+
+  it('keeps the mobile reader breadcrumb compact without duplicate separators', () => {
+    expect(cssSource).toContain('.reader-breadcrumb span:nth-of-type(1),')
+    expect(cssSource).toContain('.reader-breadcrumb span:nth-of-type(2) {')
+  })
+
+  it('prefers measured web pagination with estimated pagination as fallback', () => {
+    expect(appSource).toContain('useMeasuredReaderPages')
+    expect(appSource).toContain('const pages = measuredPages.length > 0 ? measuredPages : fallbackPages')
+    expect(appSource).not.toContain('loadLatexPageMap')
+    expect(appSource).not.toContain('buildReaderPagesFromPageMap(availableChapters')
     expect(paginationSource).toContain('export const PAGE_LINE_CAPACITY')
     expect(paginationSource).toContain('function estimateTextLineCost')
     expect(appSource).not.toContain('const PAGE_CHAR_CAPACITY')
+  })
+
+  it('fills measured pages with a fitting slice of the next paragraph before closing the page', () => {
+    expect(appSource).not.toContain('if (blocks.length > 0) break')
+    expect(appSource).toContain('findMeasuredSliceEnd(chapter, paragraph, segment, charOffset, pages.length + 1, isChapterOpening, blocks, measurePage)')
+    expect(appSource).toContain('...prefixBlocks')
+  })
+
+  it('avoids orphaned one-word starts of the next paragraph at the bottom of a measured page', () => {
+    expect(appSource).toContain('const MIN_TRAILING_PARAGRAPH_TOKENS =')
+    expect(appSource).toContain('const MIN_TRAILING_PARAGRAPH_CHARS =')
+    expect(appSource).toContain('isUsefulTrailingParagraphSlice(segment, charOffset, splitEnd)')
+  })
+
+  it('keeps measured pagination responsive by yielding and debouncing resize repagination', () => {
+    expect(appSource).toContain('const MEASURE_YIELD_EVERY =')
+    expect(appSource).toContain('await yieldToBrowser()')
+    expect(appSource).toContain('const MEASURE_RESIZE_DEBOUNCE_MS =')
+    expect(appSource).toContain('window.setTimeout(() => setLayoutVersion')
+  })
+
+  it('keeps the reference LaTeX page-map boundaries aligned with the rendered volume PDF', () => {
+    const [introFirstPage, introSecondPage, chapterFirstPage, chapterSecondPage, chapterThirdPage] = latexPageMap.pages
+
+    expect(introFirstPage.displayPageNumber).toBe(1)
+    expect(introSecondPage.displayPageNumber).toBe(2)
+    expect(chapterFirstPage.displayPageNumber).toBe(3)
+    expect(introSecondPage.start.chapterId).toBe('chapter-001')
+    expect(introSecondPage.end).toMatchObject({
+      chapterId: 'chapter-001',
+      paragraphId: 'book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-001-p-0005',
+      charOffset: 5,
+    })
+    expect(chapterFirstPage.start).toMatchObject({
+      chapterId: 'chapter-002',
+      paragraphId: 'book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0001',
+      charOffset: 0,
+    })
+    expect(chapterThirdPage.start).toMatchObject({
+      chapterId: 'chapter-002',
+      paragraphId: 'book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0009',
+      charOffset: 279,
+    })
+    expect(chapterSecondPage.end).toMatchObject({
+      chapterId: 'chapter-002',
+      paragraphId: 'book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0009',
+      charOffset: 278,
+    })
   })
 
   it('contains intro annotations, footnotes, and hierarchical candidate memberships from source artifacts', () => {
@@ -234,6 +307,45 @@ describe('App', () => {
     await waitFor(() => {
       expect(localStorage.getItem('szwejk-reader.progress')).toContain('tokenId')
     })
+  })
+
+  it('lets the public reader flag a token with an optional note for later review', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+
+    const token = (await screen.findAllByTestId('reader-token'))[0]
+    await user.click(token)
+
+    const dialog = await screen.findByRole('dialog', { name: /równoległy tekst/i })
+    expect(within(dialog).queryByLabelText(/uwaga do oznaczenia/i)).not.toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: /oznacz do sprawdzenia/i }))
+    expect(await within(dialog).findByLabelText(/uwaga do oznaczenia/i)).toBeInTheDocument()
+    await user.type(within(dialog).getByLabelText(/uwaga do oznaczenia/i), 'To podstawienie brzmi sztucznie.')
+    await user.click(within(dialog).getByRole('button', { name: /zapisz uwagę/i }))
+
+    await waitFor(() => {
+      const overrides = JSON.parse(localStorage.getItem('szwejk-reader.overrides') ?? '[]')
+      expect(overrides).toHaveLength(1)
+      expect(overrides[0].operations[0]).toMatchObject({
+        type: 'token-feedback-flag',
+        tokenId: token.dataset.tokenId,
+        paragraphId: token.dataset.paragraphId,
+        value: {
+          note: 'To podstawienie brzmi sztucznie.',
+          flagged: true,
+        },
+      })
+    })
+    expect(token).toHaveAttribute('data-feedback', 'flagged')
+    expect(within(dialog).getAllByText(/zapisane/i).length).toBeGreaterThan(0)
+  })
+
+  it('uses an amber highlight for the whole active popup phrase', () => {
+    expect(cssSource).toContain('.reader-token-active')
+    expect(cssSource).toContain('hsl(43 92% 58%) 28%')
+    expect(cssSource).toContain('.reader-token-clicked')
+    expect(cssSource).toContain('hsl(43 92% 58%) 38%')
   })
 
   it('closes the popover when the reader background is clicked', async () => {

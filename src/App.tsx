@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { BookOpen, Bug, ChevronLeft, ChevronRight, Download, Lock, Minus, Plus } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent, type MouseEvent as ReactMouseEvent } from 'react'
+import { flushSync } from 'react-dom'
+import { createRoot } from 'react-dom/client'
+import { BookOpen, Bug, Check, ChevronLeft, ChevronRight, Download, Flag, Lock, Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { loadLatexPageMap, loadMiniFixture } from '@/data/fixture'
-import { buildReaderPages, buildReaderPagesFromPageMap, getReaderSegment } from '@/domain/pagination'
+import { loadMiniFixture } from '@/data/fixture'
+import { buildReaderPages, collectPageFootnotesForBlocks, getReaderSegment, sliceParagraph, type ReaderPage, type ReaderPageBlock } from '@/domain/pagination'
 import { findSmallestCandidateForToken } from '@/domain/selection'
 import { splitTokenTextParts } from '@/domain/textSegments'
-import type { Candidate, Chapter, Footnote, Paragraph, ReaderFixture, ReaderOverride, ReaderPageMap, Token, Volume } from '@/domain/types'
+import type { Candidate, Chapter, Footnote, Paragraph, ReaderFixture, ReaderOverride, RenderSegment, Token, Volume } from '@/domain/types'
 import { logCorrectionEvent, logWordClick, submitOverrides } from '@/telemetry/telemetry'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +27,8 @@ type TokenSelection = {
   }
 }
 
+type TokenClickHandler = (chapterId: string, paragraph: Paragraph, segmentId: string, token: Token, anchor?: DOMRect) => void
+
 type ReaderProgress = {
   workId: string
   volumeId: string
@@ -38,6 +42,17 @@ type ReaderProgress = {
 const FIXTURE_VOLUME_ID = 'volume-1'
 const PROGRESS_KEY = 'szwejk-reader.progress'
 const OVERRIDES_KEY = 'szwejk-reader.overrides'
+const MEASURE_MAX_PAGES = 1200
+const MEASURE_YIELD_EVERY = 10
+const MEASURE_RESIZE_DEBOUNCE_MS = 180
+const MIN_TRAILING_PARAGRAPH_TOKENS = 4
+const MIN_TRAILING_PARAGRAPH_CHARS = 24
+const FEEDBACK_OPERATION_TYPE = 'token-feedback-flag'
+const FEEDBACK_NOTE_MAX_LENGTH = 500
+const FEEDBACK_SCHEMA_VERSION = 'reader-feedback-v1'
+const SITE_DATA_OVERRIDES_ENDPOINT = './.herenow/data/override_submissions'
+const EMPTY_CHAPTERS: Chapter[] = []
+const EMPTY_FEEDBACK_TOKEN_KEYS = new Set<string>()
 
 const defaultVolumes: Volume[] = [
   { id: 'volume-1', label: 'Tom I', status: 'available', chapters: [] },
@@ -56,6 +71,30 @@ function readOverrides(): ReaderOverride[] {
 
 function writeOverrides(overrides: ReaderOverride[]): void {
   localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides))
+}
+
+function makeFeedbackTokenKey(chapterId: string, paragraphId: string, tokenId: string): string {
+  return `${chapterId}\u0000${paragraphId}\u0000${tokenId}`
+}
+
+function getFeedbackTokenKeys(overrides: ReaderOverride[]): Set<string> {
+  const keys = new Set<string>()
+  for (const override of overrides) {
+    for (const operation of override.operations) {
+      if (operation.type !== FEEDBACK_OPERATION_TYPE || !operation.tokenId || !operation.paragraphId) continue
+      keys.add(makeFeedbackTokenKey(override.chapterId, operation.paragraphId, operation.tokenId))
+    }
+  }
+  return keys
+}
+
+function trimFeedbackNote(note: string): string {
+  return note.trim().slice(0, FEEDBACK_NOTE_MAX_LENGTH)
+}
+
+function createFeedbackOverrideId(): string {
+  const random = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  return `feedback-${random}`
 }
 
 function readProgress(): ReaderProgress | null {
@@ -112,7 +151,6 @@ function App() {
   const [overrides, setOverrides] = useState<ReaderOverride[]>(() => readOverrides())
   const [currentLocation, setCurrentLocation] = useState<ReaderProgress | null>(() => readProgress())
   const [currentPageIndex, setCurrentPageIndex] = useState(0)
-  const [pageMap, setPageMap] = useState<ReaderPageMap | null>(null)
   const [tocOpen, setTocOpen] = useState(false)
 
   const debugMode = useMemo(() => getDebugMode(), [])
@@ -121,10 +159,10 @@ function App() {
   const availableChapters = useMemo(() => getAvailableChapters(fixture), [fixture])
   const firstChapter = availableChapters[0]
   const chapterById = useMemo(() => new Map(availableChapters.map((chapter) => [chapter.id, chapter])), [availableChapters])
-  const pages = useMemo(
-    () => (pageMap ? buildReaderPagesFromPageMap(availableChapters, pageMap) : buildReaderPages(availableChapters)),
-    [availableChapters, pageMap],
-  )
+  const fallbackPages = useMemo(() => buildReaderPages(availableChapters), [availableChapters])
+  const measuredPages = useMeasuredReaderPages(view === 'reader' ? availableChapters : EMPTY_CHAPTERS, chapterById, work?.id ?? 'work-szwejk')
+  const pages = measuredPages.length > 0 ? measuredPages : fallbackPages
+  const feedbackTokenKeys = useMemo(() => getFeedbackTokenKeys(overrides), [overrides])
   const resolvedPageIndex = useMemo(() => {
     if (pages.length === 0) return 0
     const segmentId = currentLocation?.segmentId
@@ -153,21 +191,6 @@ function App() {
       .catch((error: unknown) => {
         if (!alive) return
         setLoadError(error instanceof Error ? error.message : String(error))
-      })
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  useEffect(() => {
-    let alive = true
-    loadLatexPageMap()
-      .then((loaded) => {
-        if (!alive) return
-        setPageMap(loaded)
-      })
-      .catch((error: unknown) => {
-        console.warn('Failed to load LaTeX page map', error)
       })
     return () => {
       alive = false
@@ -312,7 +335,80 @@ function App() {
       candidateId: selection.activeCandidate?.id,
       tokenId: selection.token.id,
     })
-    await submitOverrides(next)
+    await submitOverrides([override])
+  }
+
+  async function saveTokenFeedback(note: string) {
+    if (!selection) return
+    const trimmedNote = trimFeedbackNote(note)
+    const nextOperation = {
+      type: FEEDBACK_OPERATION_TYPE,
+      tokenId: selection.token.id,
+      candidateId: selection.activeCandidate?.id,
+      paragraphId: selection.paragraph.id,
+      value: {
+        schemaVersion: FEEDBACK_SCHEMA_VERSION,
+        segmentId: selection.segmentId,
+        tokenText: selection.token.text,
+        language: selection.token.language,
+        candidateIds: selection.candidateIds.slice(0, 20),
+        activeCandidateId: selection.activeCandidate?.id,
+        note: trimmedNote || undefined,
+        flagged: true,
+      },
+    }
+    const existingFeedbackIndex = overrides.findIndex((override) =>
+      override.chapterId === selection.chapterId &&
+      override.operations.some(
+        (operation) =>
+          operation.type === FEEDBACK_OPERATION_TYPE &&
+          operation.paragraphId === selection.paragraph.id &&
+          operation.tokenId === selection.token.id,
+      ),
+    )
+    const override: ReaderOverride =
+      existingFeedbackIndex >= 0
+        ? {
+            ...overrides[existingFeedbackIndex],
+            operations: overrides[existingFeedbackIndex].operations.map((operation) =>
+              operation.type === FEEDBACK_OPERATION_TYPE &&
+              operation.paragraphId === selection.paragraph.id &&
+              operation.tokenId === selection.token.id
+                ? nextOperation
+                : operation,
+            ),
+          }
+        : {
+            id: createFeedbackOverrideId(),
+            workId: work?.id ?? 'work-szwejk',
+            volumeId: FIXTURE_VOLUME_ID,
+            chapterId: selection.chapterId,
+            baseArtifactId: fixture?.metadata.sourceArtifactId,
+            createdAt: new Date().toISOString(),
+            operations: [nextOperation],
+          }
+    const next =
+      existingFeedbackIndex >= 0
+        ? overrides.map((item, index) => (index === existingFeedbackIndex ? override : item))
+        : [...overrides, override]
+
+    if (existingFeedbackIndex >= 0) {
+      override.workId = work?.id ?? override.workId
+      override.volumeId = FIXTURE_VOLUME_ID
+      override.chapterId = selection.chapterId
+      override.baseArtifactId = fixture?.metadata.sourceArtifactId ?? override.baseArtifactId
+    }
+    setOverrides(next)
+    writeOverrides(next)
+    logCorrectionEvent({
+      workId: override.workId,
+      volumeId: override.volumeId,
+      chapterId: override.chapterId,
+      eventType: trimmedNote ? 'feedback_note_saved' : 'feedback_flag_saved',
+      candidateId: selection.activeCandidate?.id,
+      tokenId: selection.token.id,
+    })
+    await submitOverrides([override], { endpoint: SITE_DATA_OVERRIDES_ENDPOINT })
   }
 
   const exportOverrides = () => downloadJson('szwejk-reader-overrides.json', overrides)
@@ -321,6 +417,7 @@ function App() {
     const canGoBack = resolvedPageIndex > 0
     const canGoForward = resolvedPageIndex < pages.length - 1
     const currentChapterTitle = currentPage?.chapterTitle ?? firstChapter?.title ?? 'Rozdział 1'
+    const selectionFeedbackSaved = selection ? feedbackTokenKeys.has(makeFeedbackTokenKey(selection.chapterId, selection.paragraph.id, selection.token.id)) : false
 
     return (
       <main className="reader-view text-foreground" data-testid="reader-screen" onClick={closeReaderOverlays}>
@@ -374,27 +471,21 @@ function App() {
               ) : null}
             </div>
 
-            <div className="reader-page-content">
-              {currentPage?.isChapterOpening ? <ChapterTitle chapter={chapterById.get(currentPage.chapterId)} /> : null}
-              {currentPage
-                ? currentPage.blocks.map((block) => (
-                    <ReaderParagraph
-                      key={block.id}
-                      paragraph={block.paragraph}
-                      workId={work?.id ?? 'work-szwejk'}
-                      chapterId={currentPage.chapterId}
-                      continuation={block.continuation}
-                      footnoteNumberById={new Map(currentPage.footnotes.map((footnote, index) => [footnote.id, index + 1]))}
-                      selection={selection}
-                      onTokenClick={handleTokenClick}
-                    />
-                  ))
-                : null}
-            </div>
+            <ReaderPageBody
+              page={currentPage}
+              chapterById={chapterById}
+              workId={work?.id ?? 'work-szwejk'}
+              selection={selection}
+              feedbackTokenKeys={feedbackTokenKeys}
+              onTokenClick={handleTokenClick}
+            />
 
-            <ReaderPopover selection={selection} onSelectCandidate={selectCandidate} />
-
-            {currentPage?.footnotes.length ? <PageFootnotes footnotes={currentPage.footnotes} /> : null}
+            <ReaderPopover
+              selection={selection}
+              feedbackSaved={selectionFeedbackSaved}
+              onSelectCandidate={selectCandidate}
+              onSaveFeedback={saveTokenFeedback}
+            />
 
             <div className="reader-page-foot" onClick={(event) => event.stopPropagation()}>
               <Button variant="ghost" size="sm" onClick={() => goToPage(resolvedPageIndex - 1)} disabled={!canGoBack} aria-label="Poprzednia strona">
@@ -456,15 +547,345 @@ function App() {
   )
 }
 
+function useMeasuredReaderPages(chapters: Chapter[], chapterById: Map<string, Chapter>, workId: string): ReaderPage[] {
+  const [pages, setPages] = useState<ReaderPage[]>([])
+  const [layoutVersion, setLayoutVersion] = useState(0)
+  const shouldMeasure = chapters.length > 0 && !(typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent))
+
+  useEffect(() => {
+    let resizeTimer = 0
+    const handleResize = () => {
+      window.clearTimeout(resizeTimer)
+      resizeTimer = window.setTimeout(() => setLayoutVersion((version) => version + 1), MEASURE_RESIZE_DEBOUNCE_MS)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.clearTimeout(resizeTimer)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!shouldMeasure) return
+
+    let cancelled = false
+    const measureStage = document.createElement('div')
+    measureStage.className = 'reader-measure-stage'
+    measureStage.setAttribute('aria-hidden', 'true')
+    document.body.appendChild(measureStage)
+    const root = createRoot(measureStage)
+    let measureCount = 0
+
+    const measurePage = async (page: ReaderPage): Promise<boolean> => {
+      if (cancelled) return false
+      measureCount += 1
+      if (measureCount % MEASURE_YIELD_EVERY === 0) {
+        await yieldToBrowser()
+        if (cancelled) return false
+      }
+      flushSync(() => {
+        root.render(<MeasuredReaderPage page={page} chapterById={chapterById} workId={workId} />)
+      })
+      const result = getMeasuredPageFit(measureStage)
+      if (result === null) {
+        throw new Error('Reader page measurement frame has no layout box')
+      }
+      return result
+    }
+
+    waitForReaderFonts()
+      .then(() => buildMeasuredReaderPages(chapters, measurePage, () => cancelled))
+      .then((nextPages) => {
+        if (!cancelled && nextPages.length > 0) setPages(nextPages)
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          console.warn('Measured reader pagination failed', error)
+          setPages([])
+        }
+      })
+
+    return () => {
+      cancelled = true
+      root.unmount()
+      measureStage.remove()
+    }
+  }, [chapterById, chapters, layoutVersion, shouldMeasure, workId])
+
+  return shouldMeasure ? pages : []
+}
+
+async function waitForReaderFonts(): Promise<void> {
+  if (!('fonts' in document)) return
+  await document.fonts.ready
+}
+
+function yieldToBrowser(): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, 0))
+}
+
+function getMeasuredPageFit(container: HTMLElement): boolean | null {
+  const frame = container.querySelector('.reader-page-frame')
+  const content = container.querySelector('.reader-page-content')
+  const notes = container.querySelector('.reader-page-notes')
+  if (!(frame instanceof HTMLElement) || !(content instanceof HTMLElement) || frame.clientHeight <= 0 || content.clientHeight <= 0) return null
+  const tolerance = 1
+  const frameFits = frame.scrollHeight <= frame.clientHeight + tolerance
+  const contentFits = content.scrollHeight <= content.clientHeight + tolerance
+  const notesFit = !(notes instanceof HTMLElement) || notes.scrollHeight <= notes.clientHeight + tolerance
+  return frameFits && contentFits && notesFit
+}
+
+async function buildMeasuredReaderPages(
+  chapters: Chapter[],
+  measurePage: (page: ReaderPage) => Promise<boolean>,
+  isCancelled: () => boolean,
+): Promise<ReaderPage[]> {
+  const pages: ReaderPage[] = []
+  const seenChapterIds = new Set<string>()
+  let chapterIndex = 0
+  let paragraphIndex = 0
+  let charOffset = 0
+
+  while (chapterIndex < chapters.length && pages.length < MEASURE_MAX_PAGES) {
+    if (isCancelled()) return pages
+    const chapter = chapters[chapterIndex]
+    if (paragraphIndex >= chapter.paragraphs.length) {
+      chapterIndex += 1
+      paragraphIndex = 0
+      charOffset = 0
+      continue
+    }
+
+    const blocks: ReaderPageBlock[] = []
+    const isChapterOpening = !seenChapterIds.has(chapter.id)
+
+    while (paragraphIndex < chapter.paragraphs.length) {
+      if (isCancelled()) return pages
+      const paragraph = chapter.paragraphs[paragraphIndex]
+      const segment = getReaderSegment(paragraph)
+      if (!segment || charOffset >= segment.text.length) {
+        paragraphIndex += 1
+        charOffset = 0
+        continue
+      }
+
+      const fullBlock = makeWebPageBlock(paragraph, blocks.length, charOffset, segment.text.length)
+      const fullPage = makeWebReaderPage(chapter, pages.length + 1, isChapterOpening, [...blocks, fullBlock])
+      const fullFits = await measurePage(fullPage)
+
+      if (fullFits) {
+        blocks.push(fullBlock)
+        paragraphIndex += 1
+        charOffset = 0
+        continue
+      }
+
+      if (blocks.length > 0) {
+        const splitEnd = await findMeasuredSliceEnd(chapter, paragraph, segment, charOffset, pages.length + 1, isChapterOpening, blocks, measurePage)
+        if (splitEnd === null) break
+        if (!isUsefulTrailingParagraphSlice(segment, charOffset, splitEnd)) break
+        const splitBlock = makeWebPageBlock(paragraph, blocks.length, charOffset, splitEnd)
+        blocks.push(splitBlock)
+        charOffset = skipSliceWhitespace(segment.text, splitEnd)
+        if (charOffset >= segment.text.length) {
+          paragraphIndex += 1
+          charOffset = 0
+        }
+        break
+      }
+
+      const splitEnd = await findMeasuredSliceEnd(chapter, paragraph, segment, charOffset, pages.length + 1, isChapterOpening, [], measurePage)
+      if (splitEnd === null) {
+        const firstBreakpoint = getTokenBreakpoints(segment, charOffset)[0]
+        if (!firstBreakpoint) {
+          paragraphIndex += 1
+          charOffset = 0
+          continue
+        }
+        const splitBlock = makeWebPageBlock(paragraph, 0, charOffset, firstBreakpoint)
+        blocks.push(splitBlock)
+        charOffset = skipSliceWhitespace(segment.text, firstBreakpoint)
+        if (charOffset >= segment.text.length) {
+          paragraphIndex += 1
+          charOffset = 0
+        }
+        break
+      }
+      const splitBlock = makeWebPageBlock(paragraph, 0, charOffset, splitEnd)
+      blocks.push(splitBlock)
+      charOffset = skipSliceWhitespace(segment.text, splitEnd)
+      if (charOffset >= segment.text.length) {
+        paragraphIndex += 1
+        charOffset = 0
+      }
+      break
+    }
+
+    if (blocks.length === 0) {
+      chapterIndex += 1
+      paragraphIndex = 0
+      charOffset = 0
+      continue
+    }
+
+    pages.push(makeWebReaderPage(chapter, pages.length + 1, isChapterOpening, blocks))
+    seenChapterIds.add(chapter.id)
+  }
+
+  return pages
+}
+
+async function findMeasuredSliceEnd(
+  chapter: Chapter,
+  paragraph: Paragraph,
+  segment: RenderSegment,
+  start: number,
+  pageNumber: number,
+  isChapterOpening: boolean,
+  prefixBlocks: ReaderPageBlock[],
+  measurePage: (page: ReaderPage) => Promise<boolean>,
+): Promise<number | null> {
+  const breakpoints = getTokenBreakpoints(segment, start)
+  if (breakpoints.length === 0) return null
+  let low = 0
+  let high = breakpoints.length - 1
+  let bestEnd: number | null = null
+
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2)
+    const candidateEnd = breakpoints[middle]
+    const candidatePage = makeWebReaderPage(chapter, pageNumber, isChapterOpening, [
+      ...prefixBlocks,
+      makeWebPageBlock(paragraph, prefixBlocks.length, start, candidateEnd),
+    ])
+    const fits = await measurePage(candidatePage)
+    if (fits) {
+      bestEnd = candidateEnd
+      low = middle + 1
+    } else {
+      high = middle - 1
+    }
+  }
+
+  return bestEnd
+}
+
+function getTokenBreakpoints(segment: RenderSegment, start: number): number[] {
+  const breakpoints = segment.tokens
+    .map((token) => token.end)
+    .filter((offset) => offset > start && offset <= segment.text.length)
+  if (breakpoints.at(-1) !== segment.text.length) breakpoints.push(segment.text.length)
+  return Array.from(new Set(breakpoints)).sort((left, right) => left - right)
+}
+
+function isUsefulTrailingParagraphSlice(segment: RenderSegment, start: number, end: number): boolean {
+  const tokenCount = segment.tokens.filter((token) => token.start >= start && token.end <= end && /\p{L}/u.test(token.text)).length
+  const textLength = segment.text.slice(start, end).replace(/\s+/g, ' ').trim().length
+  return tokenCount >= MIN_TRAILING_PARAGRAPH_TOKENS || textLength >= MIN_TRAILING_PARAGRAPH_CHARS
+}
+
+function skipSliceWhitespace(text: string, offset: number): number {
+  let nextOffset = offset
+  while (nextOffset < text.length && /\s/.test(text[nextOffset])) nextOffset += 1
+  return nextOffset
+}
+
+function makeWebPageBlock(paragraph: Paragraph, sliceIndex: number, start: number, end: number): ReaderPageBlock {
+  return {
+    id: `${paragraph.id}:web-page-slice:${sliceIndex}:${start}:${end}`,
+    paragraph: sliceParagraph(paragraph, start, end),
+    continuation: start > 0,
+  }
+}
+
+function makeWebReaderPage(chapter: Chapter, pageNumber: number, isChapterOpening: boolean, blocks: ReaderPageBlock[]): ReaderPage {
+  return {
+    id: `web-page-${pageNumber}`,
+    chapterId: chapter.id,
+    chapterTitle: chapter.title,
+    isChapterOpening,
+    displayPageNumber: pageNumber,
+    blocks,
+    footnotes: collectPageFootnotesForBlocks(chapter, blocks),
+  }
+}
+
+function MeasuredReaderPage({ page, chapterById, workId }: { page: ReaderPage; chapterById: Map<string, Chapter>; workId: string }) {
+  return (
+    <article className="reader-page-frame reader-page-frame-measure" data-testid="reader-measure-page">
+      <div className="reader-page-head" />
+      <ReaderPageBody
+        page={page}
+        chapterById={chapterById}
+        workId={workId}
+        selection={null}
+        feedbackTokenKeys={EMPTY_FEEDBACK_TOKEN_KEYS}
+        onTokenClick={() => undefined}
+      />
+      <div className="reader-page-foot">
+        <span className="reader-page-number tabular-nums">{page.displayPageNumber}</span>
+      </div>
+    </article>
+  )
+}
+
+function ReaderPageBody({
+  page,
+  chapterById,
+  workId,
+  selection,
+  feedbackTokenKeys,
+  onTokenClick,
+}: {
+  page?: ReaderPage
+  chapterById: Map<string, Chapter>
+  workId: string
+  selection: TokenSelection | null
+  feedbackTokenKeys: Set<string>
+  onTokenClick: TokenClickHandler
+}) {
+  return (
+    <>
+      <div className="reader-page-content">
+        {page?.isChapterOpening ? <ChapterTitle chapter={chapterById.get(page.chapterId)} /> : null}
+        {page
+          ? page.blocks.map((block) => (
+              <ReaderParagraph
+                key={block.id}
+                paragraph={block.paragraph}
+                workId={workId}
+                chapterId={page.chapterId}
+                continuation={block.continuation}
+                footnoteNumberById={new Map(page.footnotes.map((footnote, index) => [footnote.id, index + 1]))}
+                selection={selection}
+                feedbackTokenKeys={feedbackTokenKeys}
+                onTokenClick={onTokenClick}
+              />
+            ))
+          : null}
+      </div>
+      {page?.footnotes.length ? <PageFootnotes footnotes={page.footnotes} /> : null}
+    </>
+  )
+}
+
 function ChapterTitle({ chapter }: { chapter?: Chapter }) {
   if (!chapter) return null
   const titlePl = chapter.titlePl || chapter.title
   const titleCs = chapter.titleCs || titlePl
+  const chapterNumber = getChapterNumber(chapter.id)
   const plStyle = chapter.titleSizesPt?.pl ? ({ fontSize: chapter.titleSizesPt.pl } satisfies CSSProperties) : undefined
   const csStyle = chapter.titleSizesPt?.cs ? ({ fontSize: chapter.titleSizesPt.cs } satisfies CSSProperties) : undefined
 
   return (
     <h2 className="chapter-title" aria-label={`${titlePl} ${titleCs}`}>
+      {chapterNumber ? (
+        <>
+          <span className="chapter-title-label">ROZDZIAŁ</span>
+          <span className="chapter-title-number">{chapterNumber}</span>
+        </>
+      ) : null}
       <span className="chapter-title-pl" style={plStyle}>
         {titlePl}
       </span>
@@ -473,6 +894,14 @@ function ChapterTitle({ chapter }: { chapter?: Chapter }) {
       </span>
     </h2>
   )
+}
+
+function getChapterNumber(chapterId: string): string | null {
+  const match = /^chapter-(\d+)$/.exec(chapterId)
+  if (!match) return null
+  const volumeChapterNumber = Number(match[1])
+  if (!Number.isFinite(volumeChapterNumber) || volumeChapterNumber <= 1) return null
+  return String(volumeChapterNumber - 1)
 }
 
 function TableOfContents({
@@ -512,6 +941,7 @@ function ReaderParagraph({
   continuation,
   footnoteNumberById,
   selection,
+  feedbackTokenKeys,
   onTokenClick,
 }: {
   paragraph: Paragraph
@@ -520,7 +950,8 @@ function ReaderParagraph({
   continuation: boolean
   footnoteNumberById: Map<string, number>
   selection: TokenSelection | null
-  onTokenClick: (chapterId: string, paragraph: Paragraph, segmentId: string, token: Token, anchor?: DOMRect) => void
+  feedbackTokenKeys: Set<string>
+  onTokenClick: TokenClickHandler
 }) {
   const segment = getReaderSegment(paragraph)
   if (!segment) return null
@@ -529,7 +960,7 @@ function ReaderParagraph({
   return (
     <p
       className={cn('reader-paragraph', continuation && 'reader-paragraph-continuation')}
-      lang={segment.language}
+      lang={segment.language === 'hybrid' ? 'pl' : segment.language}
       data-work-id={workId}
       data-volume-id={FIXTURE_VOLUME_ID}
       data-chapter-id={chapterId}
@@ -544,13 +975,20 @@ function ReaderParagraph({
         const token = part.token
         const activeRange = selection?.activeCandidate?.tokenIds.includes(token.id)
         const clicked = selection?.token.id === token.id
+        const flagged = feedbackTokenKeys.has(makeFeedbackTokenKey(chapterId, paragraph.id, token.id))
         return (
           <span
             key={part.key}
             role="button"
             tabIndex={0}
             data-testid="reader-token"
-            className={cn('reader-token', token.language === 'cs' && 'reader-token-target', activeRange && 'reader-token-active', clicked && 'reader-token-clicked')}
+            className={cn(
+              'reader-token',
+              token.language === 'cs' && 'reader-token-target',
+              flagged && 'reader-token-feedback',
+              activeRange && 'reader-token-active',
+              clicked && 'reader-token-clicked',
+            )}
             onClick={(event) => {
               event.stopPropagation()
               onTokenClick(chapterId, paragraph, segment.id, token, event.currentTarget.getBoundingClientRect())
@@ -571,6 +1009,7 @@ function ReaderParagraph({
             data-candidate-ids={token.candidateIds.join(' ')}
             data-intro-ids={(token.introIds ?? []).join(' ')}
             data-footnote-ids={(token.footnoteIds ?? []).join(' ')}
+            data-feedback={flagged ? 'flagged' : undefined}
             lang={token.language === 'cs' ? 'cs' : undefined}
           >
             <TokenText token={token} text={part.text} footnoteNumberById={footnoteNumberById} />
@@ -649,10 +1088,14 @@ function PageFootnotes({ footnotes }: { footnotes: Footnote[] }) {
 
 function ReaderPopover({
   selection,
+  feedbackSaved,
   onSelectCandidate,
+  onSaveFeedback,
 }: {
   selection: TokenSelection | null
+  feedbackSaved: boolean
   onSelectCandidate: (candidate: Candidate) => void
+  onSaveFeedback: (note: string) => Promise<void>
 }) {
   if (!selection) return null
   const candidate = selection.activeCandidate
@@ -669,6 +1112,7 @@ function ReaderPopover({
         top: `${selection.anchor.y}px`,
       } satisfies CSSProperties)
     : undefined
+  const feedbackFormKey = `${selection.chapterId}:${selection.paragraph.id}:${selection.token.id}`
 
   return (
     <aside className="reader-popover" role="dialog" aria-label="Równoległy tekst" style={style} onClick={(event) => event.stopPropagation()}>
@@ -704,7 +1148,100 @@ function ReaderPopover({
           </button>
         </div>
       ) : null}
+      <ReaderFeedbackForm key={feedbackFormKey} feedbackSaved={feedbackSaved} onSaveFeedback={onSaveFeedback} />
     </aside>
+  )
+}
+
+function ReaderFeedbackForm({
+  feedbackSaved,
+  onSaveFeedback,
+}: {
+  feedbackSaved: boolean
+  onSaveFeedback: (note: string) => Promise<void>
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const [feedbackNote, setFeedbackNote] = useState('')
+  const [feedbackState, setFeedbackState] = useState<'idle' | 'saving' | 'saved' | 'error'>(feedbackSaved ? 'saved' : 'idle')
+  const trimmedNote = trimFeedbackNote(feedbackNote)
+  const isSaved = feedbackSaved || feedbackState === 'saved'
+  const canSubmitFeedback = feedbackState !== 'saving' && (!isSaved || trimmedNote.length > 0)
+  const feedbackLabel = trimmedNote ? 'Zapisz uwagę' : isSaved ? 'Zapisane' : 'Oznacz'
+
+  async function handleFlagButtonClick(event: ReactMouseEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    setExpanded(true)
+    if (isSaved || feedbackState === 'saving') return
+    setFeedbackState('saving')
+    try {
+      await onSaveFeedback('')
+      setFeedbackState('saved')
+    } catch (error) {
+      console.warn('reader feedback save failed', error)
+      setFeedbackState('error')
+    }
+  }
+
+  async function handleFeedbackSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (!canSubmitFeedback) return
+    setFeedbackState('saving')
+    try {
+      await onSaveFeedback(feedbackNote)
+      setFeedbackNote('')
+      setFeedbackState('saved')
+    } catch (error) {
+      console.warn('reader feedback save failed', error)
+      setFeedbackState('error')
+    }
+  }
+
+  return (
+    <form className={cn('reader-feedback-form', expanded && 'reader-feedback-form-expanded')} onSubmit={handleFeedbackSubmit}>
+      <div className="reader-feedback-toolbar">
+        <button
+          type="button"
+          className={cn('reader-feedback-flag-button', isSaved && 'reader-feedback-flag-button-saved')}
+          aria-label={isSaved ? 'Dodaj uwagę do oznaczenia' : 'Oznacz do sprawdzenia'}
+          title={isSaved ? 'Dodaj uwagę do oznaczenia' : 'Oznacz do sprawdzenia'}
+          disabled={feedbackState === 'saving'}
+          onClick={handleFlagButtonClick}
+        >
+          <Flag className="h-3.5 w-3.5" />
+          {isSaved ? <Check className="reader-feedback-check h-3 w-3" /> : null}
+        </button>
+      </div>
+      {expanded ? (
+        <>
+          <label className="reader-feedback-label" htmlFor="reader-feedback-note">
+            Uwaga
+            {isSaved ? (
+              <span>
+                <Check className="h-3.5 w-3.5" />
+                zapisane
+              </span>
+            ) : null}
+          </label>
+          <textarea
+            id="reader-feedback-note"
+            aria-label="Uwaga do oznaczenia"
+            maxLength={FEEDBACK_NOTE_MAX_LENGTH}
+            placeholder="Opcjonalna uwaga"
+            value={feedbackNote}
+            onChange={(event) => setFeedbackNote(event.target.value)}
+          />
+          <div className="reader-feedback-actions">
+            {feedbackState === 'error' ? <span className="reader-feedback-error">Nie udało się zapisać</span> : <span>{feedbackNote.length}/{FEEDBACK_NOTE_MAX_LENGTH}</span>}
+            <button type="submit" disabled={!canSubmitFeedback}>
+              <Flag className="h-3.5 w-3.5" />
+              {feedbackState === 'saving' ? 'Zapisywanie' : feedbackLabel}
+            </button>
+          </div>
+        </>
+      ) : null}
+    </form>
   )
 }
 

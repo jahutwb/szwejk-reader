@@ -1,54 +1,77 @@
 # Frontend Stack
 
-Status: bootstrap recommendation, not an implemented app.
+Status: implemented MVP-0 reader app.
 
-## Recommendation
+## Stack
 
-Use Vite, React, TypeScript, Tailwind CSS, shadcn/ui, Vitest, and Testing Library for the static MVP.
+- Vite, React, TypeScript.
+- Tailwind CSS v4 through `@tailwindcss/vite`.
+- shadcn-style local `Button` component in `src/components/ui/button.tsx`.
+- lucide-react icons for reader controls and feedback actions.
+- Vitest, Testing Library, jsdom, and `@testing-library/jest-dom`.
 
-- Vite gives a fast static-app workflow and official React TypeScript templates.
-- React is a good fit for stateful reader interactions: pagination, selected token, candidate expansion, settings, and overrides.
-- TypeScript is required because the reader depends on explicit data contracts and stable IDs.
-- Tailwind CSS should handle layout, spacing, responsive behavior, and theme variables.
-- shadcn/ui should provide accessible primitives for buttons, dialogs, sheets, popovers, tabs, sliders, switches, and menus without forcing a heavy design system.
-- React Router can be added when routes become real product states, for example `/book/:bookId/chapter/:chapterId`. For the first reader spike, a small internal route state may be enough.
-- Vitest should cover pure pagination/data functions and lightweight component behavior.
-- Testing Library should cover UI behavior through DOM queries close to how users interact.
-- Playwright should come later, when pagination, viewport changes, and mobile swipe gestures exist.
+The project is intentionally still a static public reader. There is no React Router, account system, payment flow, backend app server, or final alignment editor.
 
-## Initial Commands For Later
+## Entry Points
 
-Do not run these until Jan asks to create the actual app.
+- `src/main.tsx` mounts the React app.
+- `src/App.tsx` owns public reader state, measured pagination, popovers, debug panel, token feedback, and page navigation.
+- `src/index.css` owns the literary page frame, typography, token states, popover styling, responsive rules, and embedded TeX Gyre font faces.
+- `src/data/fixture.ts` fetches and validates the reader fixture before rendering.
+
+## Data And Domain Modules
+
+- `src/domain/types.ts`: TypeScript contracts for fixture data, tokens, candidates, footnotes, events, and overrides.
+- `src/domain/schemas.ts`: runtime validation for fixture and page-map JSON.
+- `src/domain/pagination.ts`: fallback text pagination, paragraph slicing, footnote collection, and legacy/reference page-map support.
+- `src/domain/selection.ts`: smallest-candidate lookup for clicked tokens.
+- `src/domain/textSegments.ts`: rendering token/text parts from `segment.text` and token offsets.
+- `src/telemetry/telemetry.ts`: local telemetry buffer, anonymous session ID, correction events, and compact override submission POSTs.
+
+## UI Conventions
+
+- Reader mode is page-by-page, not continuous scroll.
+- Public UI should feel like a book, not a debug/admin panel.
+- Debug/admin controls remain behind `?debug=1`.
+- The public popover stays compact: counterpart text, `-`/`+` candidate range controls when available, and a flag icon. The optional note field appears only after the flag is clicked.
+- The active candidate phrase should be highlighted as a whole phrase. The clicked token can be visually stronger, but it must not be the only highlighted span when the active candidate covers multiple tokens.
+- Do not insert visible marker characters inside the prose. Use CSS backgrounds/underlines so page layout is not disturbed.
+- Avoid decorative UI that competes with typography. Controls should be small, accessible, and touch-friendly.
+
+## Fonts And Typography
+
+The reader embeds TeX Gyre fonts from `public/fonts/tex-gyre/`:
+
+- PL/source prose: TeX Gyre Pagella.
+- CS substitutions: TeX Gyre Heros.
+
+Do not synthesize spaces around punctuation. Render prose from `segment.text` plus token offsets. Keep first-line paragraph indentation and no artificial paragraph gap unless Jan explicitly changes the book design.
+
+## Testing
+
+Current tests are in:
+
+- `src/App.test.tsx`
+- `src/domain/*.test.ts`
+- `src/telemetry/telemetry.test.ts`
+
+Run with the project temp/cache environment:
 
 ```bash
-npm create vite@latest . -- --template react-ts
-npm install
-npm install tailwindcss @tailwindcss/vite
-npm install -D vitest @testing-library/react @testing-library/dom @testing-library/jest-dom jsdom
-npm install react-router
-npx shadcn@latest init -t vite
+export TMPDIR=/home/jahu/PycharmProjects/.codex-tmp
+export TMP=/home/jahu/PycharmProjects/.codex-tmp
+export TEMP=/home/jahu/PycharmProjects/.codex-tmp
+export npm_config_cache=/home/jahu/PycharmProjects/.npm-cache
+npm run typecheck
+npm run lint
+npm test -- --run
+npm run build
 ```
 
-After shadcn/ui is initialized, add only components that are actually used:
+## Known Gaps
 
-```bash
-npx shadcn@latest add button dialog popover sheet slider switch tabs tooltip
-```
-
-## Expected Project Conventions
-
-- Keep reader state separate from rendering components.
-- Keep data validators near the data types they validate.
-- Treat page numbers as derived runtime state, never as persisted progress.
-- Persist progress by stable book/chapter/span IDs on the PL axis.
-- Put CSS variables for `--reader-font-size`, `--reader-line-height`, `--reader-page-width`, and theme colors in the root stylesheet.
-- Use mobile-first layout constraints and test narrow widths before desktop polish.
-
-## Sources Checked
-
-- Vite guide: `https://vite.dev/guide/`
-- Tailwind CSS with Vite: `https://tailwindcss.com/docs/installation/using-vite`
-- shadcn/ui Vite installation: `https://ui.shadcn.com/docs/installation/vite`
-- Vitest guide: `https://vitest.dev/guide/`
-- React Testing Library intro: `https://testing-library.com/docs/react-testing-library/intro/`
-- React Router installation: `https://reactrouter.com/start/declarative/installation`
+- Measured web pagination is book-like but not TeX-identical.
+- There is no Playwright visual regression suite yet.
+- Mobile swipe navigation is still missing.
+- here.now Site Data submit path is implemented but needs live verification on an account-owned publish.
+- The full public correction/review workflow is not implemented; the current public feature is token flagging plus an optional note.

@@ -5,7 +5,7 @@
     "volumeId": "volume-1",
     "pdfPath": "/home/jahu/PycharmProjects/hybrydyzer/data/artifacts/experiments/fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_hybridization_v13_risky_editorial_v1_render_notesfix_glossary_v1/rendered/szwejk_hybridized.fullbook_consistent6_boundary_both_v1_manual_parent_realign_v3_qa_hybridization_v13_risky_editorial_v1_render_notesfix_glossary_v1.tom_1.pdf",
     "fixturePath": "public/data/fixtures/szwejk-mini/reader-fixture.json",
-    "generatedAt": "2026-07-05T10:50:05.971365+00:00",
+    "generatedAt": "2026-07-08T13:42:48.092107+00:00",
     "pdfPageCount": 340,
     "matchedPageCount": 315,
     "skippedPdfPages": [
@@ -65,8 +65,8 @@
       },
       "end": {
         "chapterId": "chapter-001",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-001-p-0003",
-        "charOffset": 206
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-001-p-0005",
+        "charOffset": 5
       }
     },
     {
@@ -74,9 +74,9 @@
       "pdfPageNumber": 7,
       "displayPageNumber": 3,
       "start": {
-        "chapterId": "chapter-001",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-001-p-0003",
-        "charOffset": 206
+        "chapterId": "chapter-002",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-002",
@@ -96,7 +96,7 @@
       "end": {
         "chapterId": "chapter-002",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0009",
-        "charOffset": 277
+        "charOffset": 278
       }
     },
     {
@@ -156,7 +156,7 @@
       "end": {
         "chapterId": "chapter-002",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0025",
-        "charOffset": 114
+        "charOffset": 115
       }
     },
     {
@@ -166,12 +166,12 @@
       "start": {
         "chapterId": "chapter-002",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0026",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-002",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0036",
-        "charOffset": 55
+        "charOffset": 56
       }
     },
     {
@@ -181,12 +181,12 @@
       "start": {
         "chapterId": "chapter-002",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0037",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-002",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0040",
-        "charOffset": 1068
+        "charOffset": 1069
       }
     },
     {
@@ -196,7 +196,7 @@
       "start": {
         "chapterId": "chapter-002",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0041",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-002",
@@ -261,7 +261,7 @@
       "end": {
         "chapterId": "chapter-002",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0065",
-        "charOffset": 140
+        "charOffset": 141
       }
     },
     {
@@ -291,7 +291,7 @@
       "end": {
         "chapterId": "chapter-002",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0086",
-        "charOffset": 245
+        "charOffset": 339
       }
     },
     {
@@ -299,14 +299,14 @@
       "pdfPageNumber": 22,
       "displayPageNumber": 18,
       "start": {
-        "chapterId": "chapter-002",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-002-p-0086",
-        "charOffset": 245
+        "chapterId": "chapter-003",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-003",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0004",
-        "charOffset": 69
+        "charOffset": 70
       }
     },
     {
@@ -321,7 +321,7 @@
       "end": {
         "chapterId": "chapter-003",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0011",
-        "charOffset": 24
+        "charOffset": 25
       }
     },
     {
@@ -381,7 +381,7 @@
       "end": {
         "chapterId": "chapter-003",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0038",
-        "charOffset": 2219
+        "charOffset": 2220
       }
     },
     {
@@ -391,7 +391,7 @@
       "start": {
         "chapterId": "chapter-003",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0039",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-003",
@@ -411,7 +411,7 @@
       "end": {
         "chapterId": "chapter-003",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0055",
-        "charOffset": 217
+        "charOffset": 219
       }
     },
     {
@@ -426,7 +426,7 @@
       "end": {
         "chapterId": "chapter-003",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0066",
-        "charOffset": 101
+        "charOffset": 102
       }
     },
     {
@@ -436,7 +436,7 @@
       "start": {
         "chapterId": "chapter-003",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0067",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-003",
@@ -471,7 +471,7 @@
       "end": {
         "chapterId": "chapter-003",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0092",
-        "charOffset": 72
+        "charOffset": 73
       }
     },
     {
@@ -481,12 +481,12 @@
       "start": {
         "chapterId": "chapter-003",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0093",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-003",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0104",
-        "charOffset": 68
+        "charOffset": 140
       }
     },
     {
@@ -494,14 +494,14 @@
       "pdfPageNumber": 35,
       "displayPageNumber": 31,
       "start": {
-        "chapterId": "chapter-003",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-003-p-0104",
-        "charOffset": 68
+        "chapterId": "chapter-004",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-004-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-004",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-004-p-0002",
-        "charOffset": 252
+        "charOffset": 253
       }
     },
     {
@@ -516,7 +516,7 @@
       "end": {
         "chapterId": "chapter-004",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-004-p-0009",
-        "charOffset": 59
+        "charOffset": 60
       }
     },
     {
@@ -526,7 +526,7 @@
       "start": {
         "chapterId": "chapter-004",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-004-p-0010",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-004",
@@ -591,7 +591,7 @@
       "end": {
         "chapterId": "chapter-004",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-004-p-0032",
-        "charOffset": 380
+        "charOffset": 381
       }
     },
     {
@@ -605,8 +605,8 @@
       },
       "end": {
         "chapterId": "chapter-004",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-004-p-0042",
-        "charOffset": 125
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-004-p-0044",
+        "charOffset": 12
       }
     },
     {
@@ -615,7 +615,7 @@
       "displayPageNumber": 39,
       "start": {
         "chapterId": "chapter-004",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-004-p-0043",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-004-p-0045",
         "charOffset": 0
       },
       "end": {
@@ -636,7 +636,7 @@
       "end": {
         "chapterId": "chapter-004",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-004-p-0056",
-        "charOffset": 86
+        "charOffset": 95
       }
     },
     {
@@ -646,12 +646,12 @@
       "start": {
         "chapterId": "chapter-004",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-004-p-0056",
-        "charOffset": 86
+        "charOffset": 95
       },
       "end": {
         "chapterId": "chapter-005",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-005-p-0001",
-        "charOffset": 749
+        "charOffset": 750
       }
     },
     {
@@ -710,8 +710,8 @@
       },
       "end": {
         "chapterId": "chapter-005",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-005-p-0022",
-        "charOffset": 23
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-005-p-0023",
+        "charOffset": 25
       }
     },
     {
@@ -720,7 +720,7 @@
       "displayPageNumber": 46,
       "start": {
         "chapterId": "chapter-005",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-005-p-0023",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-005-p-0024",
         "charOffset": 0
       },
       "end": {
@@ -741,7 +741,7 @@
       "end": {
         "chapterId": "chapter-005",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-005-p-0038",
-        "charOffset": 17
+        "charOffset": 122
       }
     },
     {
@@ -749,14 +749,14 @@
       "pdfPageNumber": 52,
       "displayPageNumber": 48,
       "start": {
-        "chapterId": "chapter-005",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-005-p-0038",
-        "charOffset": 18
+        "chapterId": "chapter-006",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-006",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0003",
-        "charOffset": 125
+        "charOffset": 126
       }
     },
     {
@@ -766,12 +766,12 @@
       "start": {
         "chapterId": "chapter-006",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0004",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-006",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0013",
-        "charOffset": 26
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0014",
+        "charOffset": 28
       }
     },
     {
@@ -780,7 +780,7 @@
       "displayPageNumber": 50,
       "start": {
         "chapterId": "chapter-006",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0014",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0015",
         "charOffset": 0
       },
       "end": {
@@ -801,7 +801,7 @@
       "end": {
         "chapterId": "chapter-006",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0034",
-        "charOffset": 55
+        "charOffset": 56
       }
     },
     {
@@ -811,7 +811,7 @@
       "start": {
         "chapterId": "chapter-006",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0035",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-006",
@@ -830,8 +830,8 @@
       },
       "end": {
         "chapterId": "chapter-006",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0041",
-        "charOffset": 160
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0042",
+        "charOffset": 45
       }
     },
     {
@@ -840,8 +840,8 @@
       "displayPageNumber": 54,
       "start": {
         "chapterId": "chapter-006",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0042",
-        "charOffset": 2
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0043",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-006",
@@ -861,7 +861,7 @@
       "end": {
         "chapterId": "chapter-006",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0054",
-        "charOffset": 39
+        "charOffset": 40
       }
     },
     {
@@ -876,7 +876,7 @@
       "end": {
         "chapterId": "chapter-006",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0056",
-        "charOffset": 1121
+        "charOffset": 1122
       }
     },
     {
@@ -891,7 +891,7 @@
       "end": {
         "chapterId": "chapter-006",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0065",
-        "charOffset": 95
+        "charOffset": 96
       }
     },
     {
@@ -906,7 +906,7 @@
       "end": {
         "chapterId": "chapter-006",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0072",
-        "charOffset": 85
+        "charOffset": 86
       }
     },
     {
@@ -916,12 +916,12 @@
       "start": {
         "chapterId": "chapter-006",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0073",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-006",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0080",
-        "charOffset": 37
+        "charOffset": 145
       }
     },
     {
@@ -929,9 +929,9 @@
       "pdfPageNumber": 64,
       "displayPageNumber": 60,
       "start": {
-        "chapterId": "chapter-006",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-006-p-0080",
-        "charOffset": 40
+        "chapterId": "chapter-007",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-007",
@@ -966,7 +966,7 @@
       "end": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0017",
-        "charOffset": 51
+        "charOffset": 52
       }
     },
     {
@@ -976,12 +976,12 @@
       "start": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0018",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-007",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0026",
-        "charOffset": 49
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0027",
+        "charOffset": 51
       }
     },
     {
@@ -990,8 +990,8 @@
       "displayPageNumber": 64,
       "start": {
         "chapterId": "chapter-007",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0027",
-        "charOffset": 2
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0028",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-007",
@@ -1011,7 +1011,7 @@
       "end": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0041",
-        "charOffset": 412
+        "charOffset": 413
       }
     },
     {
@@ -1021,12 +1021,12 @@
       "start": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0042",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0050",
-        "charOffset": 114
+        "charOffset": 115
       }
     },
     {
@@ -1036,12 +1036,12 @@
       "start": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0051",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0058",
-        "charOffset": 103
+        "charOffset": 104
       }
     },
     {
@@ -1051,12 +1051,12 @@
       "start": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0059",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0065",
-        "charOffset": 159
+        "charOffset": 160
       }
     },
     {
@@ -1071,7 +1071,7 @@
       "end": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0074",
-        "charOffset": 98
+        "charOffset": 99
       }
     },
     {
@@ -1086,7 +1086,7 @@
       "end": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0079",
-        "charOffset": 493
+        "charOffset": 494
       }
     },
     {
@@ -1096,7 +1096,7 @@
       "start": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0080",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-007",
@@ -1146,7 +1146,7 @@
       "end": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0103",
-        "charOffset": 319
+        "charOffset": 320
       }
     },
     {
@@ -1161,7 +1161,7 @@
       "end": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0110",
-        "charOffset": 64
+        "charOffset": 65
       }
     },
     {
@@ -1171,12 +1171,12 @@
       "start": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0111",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-007",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0111",
-        "charOffset": 58
+        "charOffset": 65
       }
     },
     {
@@ -1184,14 +1184,14 @@
       "pdfPageNumber": 81,
       "displayPageNumber": 77,
       "start": {
-        "chapterId": "chapter-007",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-007-p-0111",
-        "charOffset": 58
+        "chapterId": "chapter-008",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-008",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0004",
-        "charOffset": 100
+        "charOffset": 101
       }
     },
     {
@@ -1206,7 +1206,7 @@
       "end": {
         "chapterId": "chapter-008",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0016",
-        "charOffset": 201
+        "charOffset": 202
       }
     },
     {
@@ -1220,8 +1220,8 @@
       },
       "end": {
         "chapterId": "chapter-008",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0037",
-        "charOffset": 130
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0040",
+        "charOffset": 14
       }
     },
     {
@@ -1230,13 +1230,13 @@
       "displayPageNumber": 80,
       "start": {
         "chapterId": "chapter-008",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0038",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0041",
         "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-008",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0048",
-        "charOffset": 105
+        "charOffset": 106
       }
     },
     {
@@ -1251,7 +1251,7 @@
       "end": {
         "chapterId": "chapter-008",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0057",
-        "charOffset": 94
+        "charOffset": 95
       }
     },
     {
@@ -1266,7 +1266,7 @@
       "end": {
         "chapterId": "chapter-008",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0068",
-        "charOffset": 17
+        "charOffset": 18
       }
     },
     {
@@ -1281,7 +1281,7 @@
       "end": {
         "chapterId": "chapter-008",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0071",
-        "charOffset": 199
+        "charOffset": 200
       }
     },
     {
@@ -1296,7 +1296,7 @@
       "end": {
         "chapterId": "chapter-008",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0081",
-        "charOffset": 45
+        "charOffset": 46
       }
     },
     {
@@ -1306,12 +1306,12 @@
       "start": {
         "chapterId": "chapter-008",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0082",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-008",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0092",
-        "charOffset": 228
+        "charOffset": 276
       }
     },
     {
@@ -1319,14 +1319,14 @@
       "pdfPageNumber": 90,
       "displayPageNumber": 86,
       "start": {
-        "chapterId": "chapter-008",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-008-p-0092",
-        "charOffset": 228
+        "chapterId": "chapter-009",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-009",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0004",
-        "charOffset": 157
+        "charOffset": 158
       }
     },
     {
@@ -1341,7 +1341,7 @@
       "end": {
         "chapterId": "chapter-009",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0015",
-        "charOffset": 79
+        "charOffset": 80
       }
     },
     {
@@ -1351,7 +1351,7 @@
       "start": {
         "chapterId": "chapter-009",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0016",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-009",
@@ -1386,7 +1386,7 @@
       "end": {
         "chapterId": "chapter-009",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0022",
-        "charOffset": 163
+        "charOffset": 164
       }
     },
     {
@@ -1396,7 +1396,7 @@
       "start": {
         "chapterId": "chapter-009",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0023",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-009",
@@ -1431,7 +1431,7 @@
       "end": {
         "chapterId": "chapter-009",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0026",
-        "charOffset": 3606
+        "charOffset": 3607
       }
     },
     {
@@ -1445,8 +1445,8 @@
       },
       "end": {
         "chapterId": "chapter-009",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0036",
-        "charOffset": 6
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0037",
+        "charOffset": 13
       }
     },
     {
@@ -1455,8 +1455,8 @@
       "displayPageNumber": 95,
       "start": {
         "chapterId": "chapter-009",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0036",
-        "charOffset": 6
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0037",
+        "charOffset": 13
       },
       "end": {
         "chapterId": "chapter-009",
@@ -1491,7 +1491,7 @@
       "end": {
         "chapterId": "chapter-009",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0059",
-        "charOffset": 92
+        "charOffset": 93
       }
     },
     {
@@ -1536,7 +1536,7 @@
       "end": {
         "chapterId": "chapter-009",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0077",
-        "charOffset": 377
+        "charOffset": 378
       }
     },
     {
@@ -1565,8 +1565,8 @@
       },
       "end": {
         "chapterId": "chapter-009",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0087",
-        "charOffset": 26
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0090",
+        "charOffset": 28
       }
     },
     {
@@ -1575,7 +1575,7 @@
       "displayPageNumber": 103,
       "start": {
         "chapterId": "chapter-009",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0088",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0091",
         "charOffset": 0
       },
       "end": {
@@ -1611,7 +1611,7 @@
       "end": {
         "chapterId": "chapter-009",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0110",
-        "charOffset": 41
+        "charOffset": 42
       }
     },
     {
@@ -1686,7 +1686,7 @@
       "end": {
         "chapterId": "chapter-009",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0148",
-        "charOffset": 171
+        "charOffset": 224
       }
     },
     {
@@ -1694,9 +1694,9 @@
       "pdfPageNumber": 115,
       "displayPageNumber": 111,
       "start": {
-        "chapterId": "chapter-009",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-009-p-0148",
-        "charOffset": 171
+        "chapterId": "chapter-010",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-010",
@@ -1731,7 +1731,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0009",
-        "charOffset": 557
+        "charOffset": 558
       }
     },
     {
@@ -1746,7 +1746,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0021",
-        "charOffset": 46
+        "charOffset": 47
       }
     },
     {
@@ -1756,12 +1756,12 @@
       "start": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0022",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0024",
-        "charOffset": 567
+        "charOffset": 568
       }
     },
     {
@@ -1771,12 +1771,12 @@
       "start": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0025",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0030",
-        "charOffset": 460
+        "charOffset": 461
       }
     },
     {
@@ -1791,7 +1791,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0033",
-        "charOffset": 276
+        "charOffset": 277
       }
     },
     {
@@ -1806,7 +1806,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0039",
-        "charOffset": 251
+        "charOffset": 252
       }
     },
     {
@@ -1851,7 +1851,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0053",
-        "charOffset": 168
+        "charOffset": 169
       }
     },
     {
@@ -1861,12 +1861,12 @@
       "start": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0054",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0064",
-        "charOffset": 490
+        "charOffset": 491
       }
     },
     {
@@ -1911,7 +1911,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0075",
-        "charOffset": 121
+        "charOffset": 122
       }
     },
     {
@@ -1921,12 +1921,12 @@
       "start": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0076",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0081",
-        "charOffset": 54
+        "charOffset": 55
       }
     },
     {
@@ -1956,7 +1956,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0094",
-        "charOffset": 368
+        "charOffset": 369
       }
     },
     {
@@ -1971,7 +1971,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0101",
-        "charOffset": 321
+        "charOffset": 322
       }
     },
     {
@@ -1986,7 +1986,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0103",
-        "charOffset": 983
+        "charOffset": 984
       }
     },
     {
@@ -1996,7 +1996,7 @@
       "start": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0104",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-010",
@@ -2016,7 +2016,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0112",
-        "charOffset": 418
+        "charOffset": 422
       }
     },
     {
@@ -2026,7 +2026,7 @@
       "start": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0113",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-010",
@@ -2076,7 +2076,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0134",
-        "charOffset": 87
+        "charOffset": 88
       }
     },
     {
@@ -2151,7 +2151,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0153",
-        "charOffset": 261
+        "charOffset": 262
       }
     },
     {
@@ -2166,7 +2166,7 @@
       "end": {
         "chapterId": "chapter-010",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0158",
-        "charOffset": 358
+        "charOffset": 459
       }
     },
     {
@@ -2174,14 +2174,14 @@
       "pdfPageNumber": 147,
       "displayPageNumber": 143,
       "start": {
-        "chapterId": "chapter-010",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-010-p-0158",
-        "charOffset": 358
+        "chapterId": "chapter-011",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0003",
-        "charOffset": 267
+        "charOffset": 268
       }
     },
     {
@@ -2196,7 +2196,7 @@
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0013",
-        "charOffset": 24
+        "charOffset": 25
       }
     },
     {
@@ -2206,12 +2206,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0014",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0025",
-        "charOffset": 139
+        "charOffset": 140
       }
     },
     {
@@ -2221,12 +2221,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0026",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0033",
-        "charOffset": 168
+        "charOffset": 169
       }
     },
     {
@@ -2255,8 +2255,8 @@
       },
       "end": {
         "chapterId": "chapter-011",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0053",
-        "charOffset": 14
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0054",
+        "charOffset": 37
       }
     },
     {
@@ -2265,7 +2265,7 @@
       "displayPageNumber": 149,
       "start": {
         "chapterId": "chapter-011",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0054",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0055",
         "charOffset": 0
       },
       "end": {
@@ -2286,7 +2286,7 @@
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0070",
-        "charOffset": 271
+        "charOffset": 272
       }
     },
     {
@@ -2301,7 +2301,7 @@
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0076",
-        "charOffset": 235
+        "charOffset": 236
       }
     },
     {
@@ -2316,7 +2316,7 @@
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0085",
-        "charOffset": 158
+        "charOffset": 159
       }
     },
     {
@@ -2326,12 +2326,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0086",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0095",
-        "charOffset": 107
+        "charOffset": 108
       }
     },
     {
@@ -2346,7 +2346,7 @@
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0104",
-        "charOffset": 58
+        "charOffset": 59
       }
     },
     {
@@ -2356,12 +2356,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0105",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0116",
-        "charOffset": 53
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0117",
+        "charOffset": 23
       }
     },
     {
@@ -2370,13 +2370,13 @@
       "displayPageNumber": 156,
       "start": {
         "chapterId": "chapter-011",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0117",
-        "charOffset": 2
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0118",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0129",
-        "charOffset": 133
+        "charOffset": 134
       }
     },
     {
@@ -2386,12 +2386,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0130",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0140",
-        "charOffset": 55
+        "charOffset": 56
       }
     },
     {
@@ -2401,12 +2401,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0141",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0148",
-        "charOffset": 262
+        "charOffset": 263
       }
     },
     {
@@ -2421,7 +2421,7 @@
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0159",
-        "charOffset": 214
+        "charOffset": 215
       }
     },
     {
@@ -2431,12 +2431,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0160",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0170",
-        "charOffset": 97
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0171",
+        "charOffset": 39
       }
     },
     {
@@ -2445,13 +2445,13 @@
       "displayPageNumber": 161,
       "start": {
         "chapterId": "chapter-011",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0171",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0172",
         "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0180",
-        "charOffset": 236
+        "charOffset": 237
       }
     },
     {
@@ -2461,12 +2461,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0181",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0190",
-        "charOffset": 30
+        "charOffset": 31
       }
     },
     {
@@ -2476,12 +2476,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0191",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0203",
-        "charOffset": 57
+        "charOffset": 58
       }
     },
     {
@@ -2491,12 +2491,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0204",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0213",
-        "charOffset": 172
+        "charOffset": 173
       }
     },
     {
@@ -2511,7 +2511,7 @@
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0221",
-        "charOffset": 138
+        "charOffset": 139
       }
     },
     {
@@ -2521,12 +2521,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0222",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0229",
-        "charOffset": 243
+        "charOffset": 244
       }
     },
     {
@@ -2556,7 +2556,7 @@
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0247",
-        "charOffset": 171
+        "charOffset": 172
       }
     },
     {
@@ -2566,7 +2566,7 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0248",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
@@ -2631,7 +2631,7 @@
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0272",
-        "charOffset": 299
+        "charOffset": 300
       }
     },
     {
@@ -2641,12 +2641,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0273",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0281",
-        "charOffset": 140
+        "charOffset": 141
       }
     },
     {
@@ -2656,12 +2656,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0282",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0289",
-        "charOffset": 492
+        "charOffset": 493
       }
     },
     {
@@ -2691,7 +2691,7 @@
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0303",
-        "charOffset": 106
+        "charOffset": 107
       }
     },
     {
@@ -2701,12 +2701,12 @@
       "start": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0304",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-011",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0308",
-        "charOffset": 175
+        "charOffset": 277
       }
     },
     {
@@ -2714,9 +2714,9 @@
       "pdfPageNumber": 183,
       "displayPageNumber": 179,
       "start": {
-        "chapterId": "chapter-011",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-011-p-0308",
-        "charOffset": 175
+        "chapterId": "chapter-012",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-012-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-012",
@@ -2736,7 +2736,7 @@
       "end": {
         "chapterId": "chapter-012",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-012-p-0006",
-        "charOffset": 322
+        "charOffset": 323
       }
     },
     {
@@ -2751,7 +2751,7 @@
       "end": {
         "chapterId": "chapter-012",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-012-p-0013",
-        "charOffset": 42
+        "charOffset": 43
       }
     },
     {
@@ -2781,7 +2781,7 @@
       "end": {
         "chapterId": "chapter-012",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-012-p-0028",
-        "charOffset": 53
+        "charOffset": 54
       }
     },
     {
@@ -2856,7 +2856,7 @@
       "end": {
         "chapterId": "chapter-012",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-012-p-0052",
-        "charOffset": 149
+        "charOffset": 150
       }
     },
     {
@@ -2916,7 +2916,7 @@
       "end": {
         "chapterId": "chapter-012",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-012-p-0079",
-        "charOffset": 183
+        "charOffset": 232
       }
     },
     {
@@ -2924,14 +2924,14 @@
       "pdfPageNumber": 197,
       "displayPageNumber": 193,
       "start": {
-        "chapterId": "chapter-012",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-012-p-0079",
-        "charOffset": 183
+        "chapterId": "chapter-013",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-013",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0004",
-        "charOffset": 326
+        "charOffset": 327
       }
     },
     {
@@ -2941,7 +2941,7 @@
       "start": {
         "chapterId": "chapter-013",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0005",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-013",
@@ -2976,7 +2976,7 @@
       "end": {
         "chapterId": "chapter-013",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0014",
-        "charOffset": 3066
+        "charOffset": 3067
       }
     },
     {
@@ -2991,7 +2991,7 @@
       "end": {
         "chapterId": "chapter-013",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0019",
-        "charOffset": 297
+        "charOffset": 298
       }
     },
     {
@@ -3021,7 +3021,7 @@
       "end": {
         "chapterId": "chapter-013",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0032",
-        "charOffset": 42
+        "charOffset": 43
       }
     },
     {
@@ -3031,12 +3031,12 @@
       "start": {
         "chapterId": "chapter-013",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0033",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-013",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0039",
-        "charOffset": 400
+        "charOffset": 401
       }
     },
     {
@@ -3051,7 +3051,7 @@
       "end": {
         "chapterId": "chapter-013",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0044",
-        "charOffset": 110
+        "charOffset": 111
       }
     },
     {
@@ -3061,12 +3061,12 @@
       "start": {
         "chapterId": "chapter-013",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0045",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-013",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0054",
-        "charOffset": 91
+        "charOffset": 92
       }
     },
     {
@@ -3081,7 +3081,7 @@
       "end": {
         "chapterId": "chapter-013",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0058",
-        "charOffset": 65
+        "charOffset": 127
       }
     },
     {
@@ -3089,9 +3089,9 @@
       "pdfPageNumber": 208,
       "displayPageNumber": 204,
       "start": {
-        "chapterId": "chapter-013",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-013-p-0058",
-        "charOffset": 66
+        "chapterId": "chapter-014",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-014",
@@ -3125,8 +3125,8 @@
       },
       "end": {
         "chapterId": "chapter-014",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0019",
-        "charOffset": 41
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0024",
+        "charOffset": 9
       }
     },
     {
@@ -3135,8 +3135,8 @@
       "displayPageNumber": 207,
       "start": {
         "chapterId": "chapter-014",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0020",
-        "charOffset": 2
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0025",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-014",
@@ -3156,7 +3156,7 @@
       "end": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0036",
-        "charOffset": 479
+        "charOffset": 481
       }
     },
     {
@@ -3171,7 +3171,7 @@
       "end": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0041",
-        "charOffset": 385
+        "charOffset": 386
       }
     },
     {
@@ -3181,12 +3181,12 @@
       "start": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0042",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0049",
-        "charOffset": 60
+        "charOffset": 61
       }
     },
     {
@@ -3201,7 +3201,7 @@
       "end": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0057",
-        "charOffset": 70
+        "charOffset": 71
       }
     },
     {
@@ -3211,12 +3211,12 @@
       "start": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0058",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0063",
-        "charOffset": 188
+        "charOffset": 189
       }
     },
     {
@@ -3231,7 +3231,7 @@
       "end": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0078",
-        "charOffset": 19
+        "charOffset": 20
       }
     },
     {
@@ -3241,12 +3241,12 @@
       "start": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0079",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0089",
-        "charOffset": 85
+        "charOffset": 86
       }
     },
     {
@@ -3256,12 +3256,12 @@
       "start": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0090",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0095",
-        "charOffset": 159
+        "charOffset": 160
       }
     },
     {
@@ -3321,7 +3321,7 @@
       "end": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0116",
-        "charOffset": 676
+        "charOffset": 677
       }
     },
     {
@@ -3351,7 +3351,7 @@
       "end": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0137",
-        "charOffset": 151
+        "charOffset": 152
       }
     },
     {
@@ -3381,7 +3381,7 @@
       "end": {
         "chapterId": "chapter-014",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0149",
-        "charOffset": 384
+        "charOffset": 385
       }
     },
     {
@@ -3425,8 +3425,8 @@
       },
       "end": {
         "chapterId": "chapter-014",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0166",
-        "charOffset": 72
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0167",
+        "charOffset": 70
       }
     },
     {
@@ -3434,14 +3434,14 @@
       "pdfPageNumber": 231,
       "displayPageNumber": 227,
       "start": {
-        "chapterId": "chapter-014",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-014-p-0166",
-        "charOffset": 72
+        "chapterId": "chapter-015",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0003",
-        "charOffset": 52
+        "charOffset": 53
       }
     },
     {
@@ -3451,7 +3451,7 @@
       "start": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0004",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
@@ -3546,7 +3546,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0035",
-        "charOffset": 166
+        "charOffset": 167
       }
     },
     {
@@ -3556,7 +3556,7 @@
       "start": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0036",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
@@ -3576,7 +3576,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0041",
-        "charOffset": 947
+        "charOffset": 948
       }
     },
     {
@@ -3606,7 +3606,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0053",
-        "charOffset": 211
+        "charOffset": 212
       }
     },
     {
@@ -3666,7 +3666,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0078",
-        "charOffset": 218
+        "charOffset": 219
       }
     },
     {
@@ -3696,7 +3696,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0087",
-        "charOffset": 69
+        "charOffset": 70
       }
     },
     {
@@ -3741,7 +3741,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0100",
-        "charOffset": 206
+        "charOffset": 207
       }
     },
     {
@@ -3751,7 +3751,7 @@
       "start": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0101",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
@@ -3771,7 +3771,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0109",
-        "charOffset": 106
+        "charOffset": 107
       }
     },
     {
@@ -3831,7 +3831,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0123",
-        "charOffset": 114
+        "charOffset": 115
       }
     },
     {
@@ -3841,7 +3841,7 @@
       "start": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0124",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
@@ -3861,7 +3861,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0126",
-        "charOffset": 162
+        "charOffset": 163
       }
     },
     {
@@ -3876,7 +3876,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0136",
-        "charOffset": 34
+        "charOffset": 35
       }
     },
     {
@@ -3905,8 +3905,8 @@
       },
       "end": {
         "chapterId": "chapter-015",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0152",
-        "charOffset": 113
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0153",
+        "charOffset": 11
       }
     },
     {
@@ -3915,8 +3915,8 @@
       "displayPageNumber": 259,
       "start": {
         "chapterId": "chapter-015",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0153",
-        "charOffset": 2
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0154",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
@@ -3936,7 +3936,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0174",
-        "charOffset": 154
+        "charOffset": 155
       }
     },
     {
@@ -3951,7 +3951,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0181",
-        "charOffset": 163
+        "charOffset": 164
       }
     },
     {
@@ -3980,8 +3980,8 @@
       },
       "end": {
         "chapterId": "chapter-015",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0193",
-        "charOffset": 162
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0194",
+        "charOffset": 46
       }
     },
     {
@@ -3990,7 +3990,7 @@
       "displayPageNumber": 264,
       "start": {
         "chapterId": "chapter-015",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0194",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0195",
         "charOffset": 0
       },
       "end": {
@@ -4011,7 +4011,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0207",
-        "charOffset": 107
+        "charOffset": 108
       }
     },
     {
@@ -4041,7 +4041,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0223",
-        "charOffset": 244
+        "charOffset": 245
       }
     },
     {
@@ -4051,7 +4051,7 @@
       "start": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0224",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
@@ -4071,7 +4071,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0233",
-        "charOffset": 151
+        "charOffset": 152
       }
     },
     {
@@ -4081,12 +4081,12 @@
       "start": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0234",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0240",
-        "charOffset": 293
+        "charOffset": 294
       }
     },
     {
@@ -4131,7 +4131,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0256",
-        "charOffset": 58
+        "charOffset": 59
       }
     },
     {
@@ -4141,7 +4141,7 @@
       "start": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0257",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
@@ -4161,7 +4161,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0269",
-        "charOffset": 107
+        "charOffset": 108
       }
     },
     {
@@ -4176,7 +4176,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0279",
-        "charOffset": 69
+        "charOffset": 71
       }
     },
     {
@@ -4186,7 +4186,7 @@
       "start": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0280",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
@@ -4220,8 +4220,8 @@
       },
       "end": {
         "chapterId": "chapter-015",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0295",
-        "charOffset": 24
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0299",
+        "charOffset": 23
       }
     },
     {
@@ -4230,8 +4230,8 @@
       "displayPageNumber": 280,
       "start": {
         "chapterId": "chapter-015",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0296",
-        "charOffset": 2
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0300",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
@@ -4251,7 +4251,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0305",
-        "charOffset": 727
+        "charOffset": 728
       }
     },
     {
@@ -4281,7 +4281,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0324",
-        "charOffset": 47
+        "charOffset": 48
       }
     },
     {
@@ -4291,12 +4291,12 @@
       "start": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0325",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0334",
-        "charOffset": 91
+        "charOffset": 92
       }
     },
     {
@@ -4311,7 +4311,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0338",
-        "charOffset": 160
+        "charOffset": 161
       }
     },
     {
@@ -4326,7 +4326,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0342",
-        "charOffset": 693
+        "charOffset": 694
       }
     },
     {
@@ -4336,12 +4336,12 @@
       "start": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0343",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0352",
-        "charOffset": 137
+        "charOffset": 138
       }
     },
     {
@@ -4356,7 +4356,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0361",
-        "charOffset": 33
+        "charOffset": 34
       }
     },
     {
@@ -4370,8 +4370,8 @@
       },
       "end": {
         "chapterId": "chapter-015",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0367",
-        "charOffset": 132
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0368",
+        "charOffset": 2
       }
     },
     {
@@ -4380,8 +4380,8 @@
       "displayPageNumber": 290,
       "start": {
         "chapterId": "chapter-015",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0367",
-        "charOffset": 132
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0368",
+        "charOffset": 2
       },
       "end": {
         "chapterId": "chapter-015",
@@ -4401,7 +4401,7 @@
       "end": {
         "chapterId": "chapter-015",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0385",
-        "charOffset": 31
+        "charOffset": 64
       }
     },
     {
@@ -4409,14 +4409,14 @@
       "pdfPageNumber": 296,
       "displayPageNumber": 292,
       "start": {
-        "chapterId": "chapter-015",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-015-p-0385",
-        "charOffset": 31
+        "chapterId": "chapter-016",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-016",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0005",
-        "charOffset": 111
+        "charOffset": 112
       }
     },
     {
@@ -4426,7 +4426,7 @@
       "start": {
         "chapterId": "chapter-016",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0006",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-016",
@@ -4461,7 +4461,7 @@
       "end": {
         "chapterId": "chapter-016",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0021",
-        "charOffset": 354
+        "charOffset": 355
       }
     },
     {
@@ -4476,7 +4476,7 @@
       "end": {
         "chapterId": "chapter-016",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0030",
-        "charOffset": 525
+        "charOffset": 527
       }
     },
     {
@@ -4491,7 +4491,7 @@
       "end": {
         "chapterId": "chapter-016",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0034",
-        "charOffset": 143
+        "charOffset": 145
       }
     },
     {
@@ -4521,7 +4521,7 @@
       "end": {
         "chapterId": "chapter-016",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0049",
-        "charOffset": 22
+        "charOffset": 23
       }
     },
     {
@@ -4531,12 +4531,12 @@
       "start": {
         "chapterId": "chapter-016",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0050",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-016",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0056",
-        "charOffset": 228
+        "charOffset": 229
       }
     },
     {
@@ -4655,8 +4655,8 @@
       },
       "end": {
         "chapterId": "chapter-016",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0118",
-        "charOffset": 116
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0120",
+        "charOffset": 34
       }
     },
     {
@@ -4665,7 +4665,7 @@
       "displayPageNumber": 309,
       "start": {
         "chapterId": "chapter-016",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0119",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0121",
         "charOffset": 0
       },
       "end": {
@@ -4686,7 +4686,7 @@
       "end": {
         "chapterId": "chapter-016",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0136",
-        "charOffset": 252
+        "charOffset": 253
       }
     },
     {
@@ -4696,12 +4696,12 @@
       "start": {
         "chapterId": "chapter-016",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0137",
-        "charOffset": 2
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-016",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0137",
-        "charOffset": 121
+        "charOffset": 168
       }
     },
     {
@@ -4709,9 +4709,9 @@
       "pdfPageNumber": 316,
       "displayPageNumber": 312,
       "start": {
-        "chapterId": "chapter-016",
-        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-016-p-0137",
-        "charOffset": 122
+        "chapterId": "chapter-017",
+        "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-017-p-0001",
+        "charOffset": 0
       },
       "end": {
         "chapterId": "chapter-017",
@@ -4746,7 +4746,7 @@
       "end": {
         "chapterId": "chapter-017",
         "paragraphId": "book-pl-przygody-dobrego-wojaka-szwejka-podczas-wojny-swiatowej-ch-017-p-0014",
-        "charOffset": 389
+        "charOffset": 390
       }
     },
     {

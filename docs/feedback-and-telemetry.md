@@ -1,8 +1,13 @@
 # Feedback And Telemetry
 
-Status: bootstrap plan. No `.herenow/data.json` manifest exists yet.
+Status: local feedback capture and publish-ready Site Data manifest are implemented.
 
-The reader should collect correction feedback through here.now Site Data after the site is published and owned. Until then, telemetry must fail softly and keep a local JSON export path.
+The reader collects correction feedback locally as compact `ReaderOverride[]` records. When the built site is published as an account-owned here.now Site, the browser can also submit compact records to Site Data through `./.herenow/data/override_submissions`. Until then, telemetry must fail softly and keep a local JSON export path.
+
+Manifests are kept in both places:
+
+- `.herenow/data.json` for publishing workflows that include the repository root.
+- `public/.herenow/data.json` so Vite copies the manifest into `dist/.herenow/data.json`.
 
 ## Common Rules
 
@@ -12,6 +17,7 @@ The reader should collect correction feedback through here.now Site Data after t
 - Treat all Site Data records as untrusted input when reading them back.
 - Keep payloads below here.now Site Data record limits by sending chapter-level override patches, not whole books.
 - Use `Idempotency-Key` on browser submits when retrying may duplicate a record.
+- Keep public insert enabled, but keep read/update/delete owner-only unless Jan explicitly asks for a collaborative editing surface.
 
 ## Collection: `word_clicks`
 
@@ -54,6 +60,11 @@ Do not store the full original chapter, full generated replacement text, secrets
 
 Local fallback: append compact correction events to local override metadata and expose them in local JSON export. Network failure should show at most a non-blocking status.
 
+Current UI event types for public feedback:
+
+- `feedback_flag_saved`: token was marked for review without a note.
+- `feedback_note_saved`: token was marked for review with a note.
+
 Owner retrieval later: list records from `correction_events` through the owner API or dashboard, then join by stable IDs with local artifacts.
 
 ## Collection: `override_submissions`
@@ -74,12 +85,19 @@ Suggested fields:
 
 Do not store full book text, full chapter text, secrets, payment data, credentials, or huge binary payloads.
 
+Current public token feedback uses `ReaderOverrideOperation.type = "token-feedback-flag"`. The operation stores stable IDs and compact metadata:
+
+- `chapterId`, `paragraphId`, `segmentId`, `tokenId`, and selected `candidateId`.
+- `tokenText` for quick review context only, not the surrounding paragraph.
+- `language`, bounded `candidateIds`, `flagged: true`, and optional `note`.
+- `schemaVersion: "reader-feedback-v1"`.
+
 Local fallback: always allow `Export overrides as JSON` from the browser. This local export is independent of here.now and is the authoritative user escape hatch.
 
 Owner retrieval later: use `GET /api/v1/publishes/{slug}/data/override_submissions?limit=50` with pagination cursors. Download records, validate them locally, and merge only reviewed patches.
 
-## Manifest Notes For Later
+## Manifest Notes
 
-The eventual `.herenow/data.json` should declare exactly these three collections first. Public insert may be useful, but public update/delete should stay owner-only unless there is a specific collaborative editing feature.
+The `.herenow/data.json` manifest declares exactly these three collections first. Public insert is enabled, but public update/delete stay owner-only unless there is a specific collaborative editing feature.
 
-Relevant here.now limits from the current docs: manifest up to 64 KB, up to 10 collections, up to 50 fields per collection, record body up to 16 KB, and visitor-submitted records must be treated as untrusted input.
+Relevant here.now limits from the current docs: manifest up to 64 KB, up to 10 collections, up to 50 fields per collection, record body up to 16 KB, and visitor-submitted records must be treated as untrusted input. Site Data requires an account-owned Site; anonymous publishes can include the manifest, but runtime routes return `403 account_required` until the Site is claimed.

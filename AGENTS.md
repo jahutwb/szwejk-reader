@@ -5,6 +5,14 @@
 - User-facing communication with Jan is in Polish.
 - Source code, type names, function names, comments, and technical docs may be in English when it is more practical for the project.
 
+## Local Operating Rules
+
+- Do not write temporary files to `/tmp`; root can be space-constrained. If a task needs temp/cache space, use:
+  - `/home/jahu/PycharmProjects/.codex-tmp`
+  - `/home/jahu/PycharmProjects/.npm-cache`
+- Do not modify `/home/jahu/PycharmProjects/hybrydyzer`. It may be read for source artifacts and comparison only.
+- Before substantial work, read `AGENTS.md`, `README.md`, `docs/`, and `skills/`.
+
 ## Data Rules
 
 - Do not parse PDFs as the source of truth.
@@ -32,4 +40,6 @@
 
 ## Current Phase
 
-The current phase is MVP-0: a Vite/React public reader shell with a real volume-1 v13-derived fixture, full alignment-tree candidate metadata, intro annotations, notes/footnotes, runtime validation, a book-like single-page reader view, simple page navigation, compact token counterpart popovers, local telemetry, and debug/admin tools hidden behind `?debug=1`. Render prose from `segment.text` plus token offsets; do not add synthetic spaces after tokens. Do not implement final typographic pagination, payments, accounts, public correction workflows, or the full alignment editor until Jan explicitly asks for them.
+The current phase is MVP-0 plus early public feedback capture: a Vite/React public reader shell with a real volume-1 v13-derived fixture, full alignment-tree candidate metadata, intro annotations, notes/footnotes, runtime validation, a book-like single-page reader view, measured web pagination, compact token counterpart popovers, local telemetry, token flag feedback with optional notes, here.now Site Data manifest scaffolding, and debug/admin tools hidden behind `?debug=1`.
+
+Render prose from `segment.text` plus token offsets; do not add synthetic spaces after tokens. Public token feedback must remain compact and reversible: write `ReaderOverride[]`, do not mutate base hybridization plans. Do not implement payments, accounts, public correction approval/replay workflows, or the full alignment editor until Jan explicitly asks for them.
