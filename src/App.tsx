@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent, type MouseEvent as ReactMouseEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
-import { BookOpen, Bug, Check, ChevronLeft, ChevronRight, Download, Flag, Lock, Minus, Plus } from 'lucide-react'
+import { Bug, Check, ChevronLeft, ChevronRight, Download, Flag, Lock, Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { loadMiniFixture } from '@/data/fixture'
 import { buildReaderPages, collectPageFootnotesForBlocks, getReaderSegment, sliceParagraph, type ReaderPage, type ReaderPageBlock } from '@/domain/pagination'
@@ -40,6 +40,7 @@ type ReaderProgress = {
 }
 
 const FIXTURE_VOLUME_ID = 'volume-1'
+const WORK_TITLE = 'Przygody dobrego wojaka Szwejka podczas wojny światowej'
 const PROGRESS_KEY = 'szwejk-reader.progress'
 const OVERRIDES_KEY = 'szwejk-reader.overrides'
 const MEASURE_MAX_PAGES = 1200
@@ -53,12 +54,18 @@ const FEEDBACK_SCHEMA_VERSION = 'reader-feedback-v1'
 const SITE_DATA_OVERRIDES_ENDPOINT = './.herenow/data/override_submissions'
 const EMPTY_CHAPTERS: Chapter[] = []
 const EMPTY_FEEDBACK_TOKEN_KEYS = new Set<string>()
+const VOLUME_COVER_SRC: Record<string, string> = {
+  'volume-1': '/images/covers/tom_I.png',
+  'volume-2': '/images/covers/tom_II.png',
+  'volume-3': '/images/covers/tom_III.png',
+  'volume-4': '/images/covers/tom_IV.png',
+}
 
 const defaultVolumes: Volume[] = [
   { id: 'volume-1', label: 'Tom I', status: 'available', chapters: [] },
   { id: 'volume-2', label: 'Tom II', status: 'locked', chapters: [] },
-  { id: 'volume-3', label: 'Tom III', status: 'soon', chapters: [] },
-  { id: 'volume-4', label: 'Tom IV', status: 'soon', chapters: [] },
+  { id: 'volume-3', label: 'Tom III', status: 'locked', chapters: [] },
+  { id: 'volume-4', label: 'Tom IV', status: 'locked', chapters: [] },
 ]
 
 function readOverrides(): ReaderOverride[] {
@@ -114,6 +121,43 @@ function getAvailableChapters(fixture: ReaderFixture | null): Chapter[] {
   return getAvailableVolume(fixture)?.chapters ?? []
 }
 
+function getLibraryVolumes(volumes: Volume[]): Volume[] {
+  return volumes.map((volume) => ({
+    ...volume,
+    status: volume.id === FIXTURE_VOLUME_ID ? 'available' : 'locked',
+  }))
+}
+
+function getVolumeCoverSrc(volumeId: string): string {
+  return VOLUME_COVER_SRC[volumeId] ?? VOLUME_COVER_SRC[FIXTURE_VOLUME_ID]
+}
+
+function getVolumeProgressPercent(fixture: ReaderFixture | null, progress: ReaderProgress | null): number {
+  const volume = getAvailableVolume(fixture)
+  if (!volume || !progress || progress.volumeId !== volume.id) return 0
+
+  let totalTokenCount = 0
+  let progressTokenIndex: number | null = null
+
+  for (const chapter of volume.chapters) {
+    for (const paragraph of chapter.paragraphs) {
+      const segment = getReaderSegment(paragraph)
+      const tokens = segment?.tokens ?? []
+      const paragraphStartIndex = totalTokenCount
+
+      if (progressTokenIndex === null && progress.chapterId === chapter.id && progress.paragraphId === paragraph.id) {
+        const tokenIndex = progress.tokenId ? tokens.findIndex((token) => token.id === progress.tokenId) : -1
+        progressTokenIndex = tokenIndex >= 0 ? paragraphStartIndex + tokenIndex : paragraphStartIndex
+      }
+
+      totalTokenCount += tokens.length
+    }
+  }
+
+  if (totalTokenCount <= 0 || progressTokenIndex === null) return 0
+  return Math.min(100, Math.max(0, Math.round((progressTokenIndex / totalTokenCount) * 100)))
+}
+
 function getCandidateOptionsForToken(candidates: Candidate[], token: Token): Candidate[] {
   const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]))
   const options = token.candidateIds.map((candidateId) => byId.get(candidateId)).filter((candidate): candidate is Candidate => Boolean(candidate))
@@ -156,6 +200,7 @@ function App() {
   const debugMode = useMemo(() => getDebugMode(), [])
   const work = fixture?.work
   const volumes = work?.volumes ?? defaultVolumes
+  const libraryVolumes = useMemo(() => getLibraryVolumes(volumes), [volumes])
   const availableChapters = useMemo(() => getAvailableChapters(fixture), [fixture])
   const firstChapter = availableChapters[0]
   const chapterById = useMemo(() => new Map(availableChapters.map((chapter) => [chapter.id, chapter])), [availableChapters])
@@ -179,6 +224,7 @@ function App() {
   }, [currentLocation?.paragraphId, currentLocation?.segmentId, currentPageIndex, pages])
   const currentPage = pages[resolvedPageIndex]
   const pageCount = Math.max(pages.length, 1)
+  const volumeProgressPercent = useMemo(() => getVolumeProgressPercent(fixture, currentLocation), [currentLocation, fixture])
 
   useEffect(() => {
     let alive = true
@@ -436,7 +482,7 @@ function App() {
                   Biblioteczka
                 </button>
                 <span aria-hidden="true">&gt;</span>
-                <span>Dobry wojak Szwejk</span>
+                <span>{WORK_TITLE}</span>
                 <span aria-hidden="true">&gt;</span>
                 <span>Tom I</span>
                 <span aria-hidden="true">&gt;</span>
@@ -517,30 +563,50 @@ function App() {
 
   return (
     <main className="library-view text-foreground">
-      <div className="mx-auto max-w-6xl">
-        <header className="library-header">
-          <p>Hybrydowe wydanie PL {'->'} CS</p>
-          <h1>Biblioteczka</h1>
-        </header>
-
-        <section className="library-book">
-          <div className="library-cover" aria-hidden="true">
-            <BookOpen className="h-10 w-10" />
-          </div>
-          <div className="library-copy">
-            <h2>Dobry wojak Szwejk</h2>
-            <p>Publiczny czytnik tomu I. Kliknij słowo w tekście, żeby zobaczyć równoległy fragment zaraz przy zaznaczeniu.</p>
-            {loadError ? <p className="reader-error">{loadError}</p> : null}
+      <div className="library-shell">
+        <header className="library-hero">
+          <p className="library-kicker">Hybrydowe wydanie PL {'->'} CS</p>
+          <h1>{WORK_TITLE}</h1>
+          <p className="library-lede">
+            Czytaj polski tekst, który stopniowo przechodzi w czeski. Klikaj trudniejsze słowa, żeby zobaczyć równoległy fragment.
+          </p>
+          <div className="library-actions">
             <Button onClick={openReader} disabled={!fixture || !firstChapter}>
-              <BookOpen className="h-4 w-4" />
-              Czytaj Tom I
+              Czytaj tom I
+            </Button>
+            <Button asChild variant="outline">
+              <a href="#library-about">O projekcie</a>
             </Button>
           </div>
+        </header>
+
+        {loadError ? <p className="reader-error">{loadError}</p> : null}
+
+        <section className="library-shelf" aria-labelledby="library-shelf-title">
+          <div className="library-shelf-head">
+            <h2 id="library-shelf-title">Tomy</h2>
+            <p>Wybierz tom z półki.</p>
+          </div>
           <div className="volume-grid">
-            {volumes.map((volume) => (
-              <VolumeTile key={volume.id} volume={volume} />
+            {libraryVolumes.map((volume) => (
+              <VolumeTile
+                key={volume.id}
+                volume={volume}
+                coverSrc={getVolumeCoverSrc(volume.id)}
+                progressPercent={volume.id === FIXTURE_VOLUME_ID ? volumeProgressPercent : 0}
+                onOpen={openReader}
+              />
             ))}
           </div>
+        </section>
+
+        <section className="library-about" id="library-about" aria-labelledby="library-about-title">
+          <p className="library-about-kicker">O projekcie</p>
+          <h2 id="library-about-title">Powieść w dwóch językach</h2>
+          <p>
+            Publiczny czytnik pokazuje polski tekst z równoległymi czeskimi podstawieniami. Tom I można czytać od razu, a pozostałe
+            tomy są jeszcze w przygotowaniu.
+          </p>
         </section>
       </div>
     </main>
@@ -1289,16 +1355,54 @@ function DebugPanel({
   )
 }
 
-function VolumeTile({ volume }: { volume: Volume }) {
+function VolumeTile({
+  volume,
+  coverSrc,
+  progressPercent,
+  onOpen,
+}: {
+  volume: Volume
+  coverSrc: string
+  progressPercent: number
+  onOpen: () => void
+}) {
   const locked = volume.status !== 'available'
+  const statusLabel = locked ? 'w przygotowaniu' : `${progressPercent}% przeczytane`
+  const coverLabel = locked ? 'w przygotowaniu' : 'czytaj za darmo'
+  const actionLabel = locked ? 'w przygotowaniu' : 'Czytaj'
+  const ariaLabel = locked ? `${volume.label}, w przygotowaniu` : `${volume.label}, czytaj za darmo, ${progressPercent}% przeczytane`
+
   return (
-    <div className="volume-tile">
-      <div className="flex items-center justify-between gap-2">
-        <p>{volume.label}</p>
-        {locked ? <Lock className="h-4 w-4 text-muted-foreground" /> : <span>darmowy</span>}
-      </div>
-      <small>{volume.status === 'available' ? 'aktywny' : volume.status === 'locked' ? 'zablokowany' : 'wkrótce'}</small>
-    </div>
+    <button
+      type="button"
+      className={cn('volume-tile', locked ? 'volume-tile-locked' : 'volume-tile-available')}
+      disabled={locked}
+      aria-label={ariaLabel}
+      onClick={() => {
+        if (!locked) onOpen()
+      }}
+    >
+      <span className="volume-cover-frame">
+        <img className="volume-cover-image" src={coverSrc} alt="" loading={volume.id === FIXTURE_VOLUME_ID ? 'eager' : 'lazy'} />
+        <span className={cn('volume-cover-chip', locked ? 'volume-cover-chip-muted' : 'volume-cover-chip-active')}>
+          {locked ? <Lock className="h-3.5 w-3.5" /> : null}
+          <span>{coverLabel}</span>
+        </span>
+        {!locked ? (
+          <span className="volume-progress-badge" data-testid={`volume-progress-${volume.id}`}>
+            <span className="tabular-nums">{progressPercent}%</span>
+          </span>
+        ) : null}
+      </span>
+      <span className="volume-card-copy">
+        <span className="volume-card-title">{volume.label}</span>
+        <span className="volume-card-status">{statusLabel}</span>
+        <span className="volume-card-action">
+          {actionLabel}
+          {!locked ? <ChevronRight className="h-4 w-4" /> : null}
+        </span>
+      </span>
+    </button>
   )
 }
 

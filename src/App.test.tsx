@@ -12,8 +12,17 @@ import type { ReaderFixture, ReaderPageMap, Token } from './domain/types'
 
 const readerFixture = JSON.parse(readFileSync(`${process.cwd()}/public/data/fixtures/szwejk-mini/reader-fixture.json`, 'utf8')) as ReaderFixture
 const latexPageMap = JSON.parse(readFileSync(`${process.cwd()}/public/data/fixtures/szwejk-mini/page-map-latex-v13-volume-1.json`, 'utf8')) as ReaderPageMap
+const workTitle = 'Przygody dobrego wojaka Szwejka podczas wojny światowej'
 const fixtureResponse = () => new Response(JSON.stringify(readerFixture), { status: 200, headers: { 'content-type': 'application/json' } })
 const pageMapResponse = () => new Response(JSON.stringify(latexPageMap), { status: 200, headers: { 'content-type': 'application/json' } })
+
+function getHeroReadButton(): HTMLElement {
+  return screen.getByRole('button', { name: /czytaj tom i/i })
+}
+
+function getVolumeOneReaderButton(): HTMLElement {
+  return screen.getByRole('button', { name: /tom i, czytaj za darmo, \d+% przeczytane/i })
+}
 
 async function findVisibleTargetToken(user: ReturnType<typeof userEvent.setup>, maxPages = 20): Promise<HTMLElement> {
   for (let page = 0; page < maxPages; page += 1) {
@@ -59,11 +68,14 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    expect(screen.getByText('Dobry wojak Szwejk')).toBeInTheDocument()
-    expect(screen.getByText('Tom I')).toBeInTheDocument()
-    expect(screen.getByText('Tom II')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: workTitle })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /czytaj tom i/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /o projekcie/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tom i, czytaj za darmo, 0% przeczytane/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tom ii, w przygotowaniu/i })).toBeDisabled()
 
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await waitFor(() => expect(getHeroReadButton()).not.toBeDisabled())
+    await user.click(getHeroReadButton())
 
     expect(await screen.findByTestId('reader-screen')).toBeInTheDocument()
     expect(screen.getByTestId('reader-page-frame')).toBeInTheDocument()
@@ -73,14 +85,45 @@ describe('App', () => {
     expect(screen.getAllByTestId('reader-token').length).toBeGreaterThan(0)
   })
 
+  it('shows stable reading progress on the active volume cover', async () => {
+    const chapter = readerFixture.work.volumes[0].chapters[9]
+    const paragraph = chapter.paragraphs[Math.floor(chapter.paragraphs.length / 2)]
+    const segment = paragraph.segments[0]
+    const token = segment.tokens[Math.floor(segment.tokens.length / 2)]
+    localStorage.setItem(
+      'szwejk-reader.progress',
+      JSON.stringify({
+        workId: readerFixture.work.id,
+        volumeId: 'volume-1',
+        chapterId: chapter.id,
+        paragraphId: paragraph.id,
+        segmentId: segment.id,
+        tokenId: token.id,
+        updatedAt: '2026-07-08T00:00:00.000Z',
+      }),
+    )
+
+    render(<App />)
+
+    await waitFor(
+      () => {
+        const progressText = screen.getByTestId('volume-progress-volume-1').textContent ?? ''
+        const progress = Number(progressText.match(/\d+/)?.[0] ?? 0)
+        expect(progress).toBeGreaterThan(0)
+        expect(progress).toBeLessThan(100)
+      },
+      { timeout: 5000 },
+    )
+  })
+
   it('uses a single-line breadcrumb with a clickable table of contents', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     const pageFrame = await screen.findByTestId('reader-page-frame')
     expect(within(pageFrame).getByText('Biblioteczka')).toBeInTheDocument()
-    expect(within(pageFrame).getByText('Dobry wojak Szwejk')).toBeInTheDocument()
+    expect(within(pageFrame).getByText(workTitle)).toBeInTheDocument()
     expect(within(pageFrame).getByText('Tom I')).toBeInTheDocument()
 
     await user.click(within(pageFrame).getByRole('button', { name: /spis treści/i }))
@@ -105,7 +148,7 @@ describe('App', () => {
     )
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     expect(await screen.findByRole('button', { name: /spis treści: szwejk w garnizonie/i })).toBeInTheDocument()
   })
@@ -154,7 +197,7 @@ describe('App', () => {
   it('renders bilingual adaptive chapter titles on chapter opening pages', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     const pageFrame = await screen.findByTestId('reader-page-frame')
     expect(within(pageFrame).getByRole('heading', { name: /wstęp úvod/i })).toBeInTheDocument()
@@ -169,7 +212,7 @@ describe('App', () => {
   it('renders numbered chapter opening labels to match the LaTeX volume', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     const pageFrame = await screen.findByTestId('reader-page-frame')
     await user.click(within(pageFrame).getByRole('button', { name: /spis treści/i }))
@@ -269,7 +312,7 @@ describe('App', () => {
   it('keeps debug and admin controls hidden in the public reader', async () => {
     const user = userEvent.setup()
     const { container } = render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     expect(await screen.findByTestId('reader-screen')).toBeInTheDocument()
     expect(screen.queryByText('Token debug')).not.toBeInTheDocument()
@@ -283,7 +326,7 @@ describe('App', () => {
   it('renders tokenized prose without synthetic spaces before punctuation', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     const pageText = (await screen.findByTestId('reader-page-frame')).textContent ?? ''
 
@@ -293,7 +336,7 @@ describe('App', () => {
   it('opens a compact reader popover with counterpart text and stores reading progress', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     const token = (await screen.findAllByTestId('reader-token'))[0]
     await user.click(token)
@@ -312,7 +355,7 @@ describe('App', () => {
   it('lets the public reader flag a token with an optional note for later review', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     const token = (await screen.findAllByTestId('reader-token'))[0]
     await user.click(token)
@@ -351,7 +394,7 @@ describe('App', () => {
   it('closes the popover when the reader background is clicked', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     const token = (await screen.findAllByTestId('reader-token'))[0]
     await user.click(token)
@@ -365,7 +408,7 @@ describe('App', () => {
   it('uses the hybrydyzer target typography class for Czech substitutions', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     const targetToken = await findVisibleTargetToken(user)
 
@@ -375,7 +418,7 @@ describe('App', () => {
   it('bolds first target lemma introductions from intro annotations', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     expect(await findVisibleLemmaIntro(user)).toHaveClass('lemma-intro')
   })
@@ -383,7 +426,7 @@ describe('App', () => {
   it('shows compact candidate hierarchy controls for substituted tokens', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     await user.click(await findVisibleTargetToken(user))
 
@@ -396,7 +439,7 @@ describe('App', () => {
     window.history.pushState({}, '', '/?debug=1')
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /czytaj tom i/i }))
+    await user.click(getVolumeOneReaderButton())
 
     expect(await screen.findByText('Token debug')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /pobierz moje poprawki json/i })).toBeInTheDocument()
