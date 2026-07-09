@@ -12,6 +12,13 @@ import { logCorrectionEvent, logWordClick, submitOverrides } from '@/telemetry/t
 import { cn } from '@/lib/utils'
 
 type View = 'library' | 'reader'
+type InterestKind = 'full_ebook' | 'audiobook' | 'publishing' | 'tech'
+
+type InterestLead = {
+  email: string
+  interest: InterestKind
+  createdAt: string
+}
 
 type TokenSelection = {
   token: Token
@@ -40,6 +47,7 @@ type ReaderProgress = {
 }
 
 const FIXTURE_VOLUME_ID = 'volume-1'
+const PRODUCT_TITLE = 'Szwejk Reader'
 const WORK_TITLE = 'Przygody dobrego wojaka Szwejka podczas wojny światowej'
 const VOLUME_TITLE_LINES: Record<string, [string, string]> = {
   'volume-1': ['Tom I', 'Szwejk na tyłach'],
@@ -48,6 +56,7 @@ const VOLUME_TITLE_LINES: Record<string, [string, string]> = {
   'volume-4': ['Tom IV', 'Po przesławnym laniu'],
 }
 const PROGRESS_KEY = 'szwejk-reader.progress'
+const INTEREST_KEY = 'szwejk-reader.interest'
 const OVERRIDES_KEY = 'szwejk-reader.overrides'
 const MEASURE_MAX_PAGES = 1200
 const MEASURE_YIELD_EVERY = 10
@@ -66,6 +75,13 @@ const VOLUME_COVER_SRC: Record<string, string> = {
   'volume-3': '/images/covers/tom_III.png',
   'volume-4': '/images/covers/tom_IV.png',
 }
+
+const INTEREST_OPTIONS: Array<{ value: InterestKind; label: string }> = [
+  { value: 'full_ebook', label: 'pełny e-book' },
+  { value: 'audiobook', label: 'audiobook' },
+  { value: 'publishing', label: 'współpraca wydawnicza' },
+  { value: 'tech', label: 'technologia / pipeline' },
+]
 
 const defaultVolumes: Volume[] = [
   { id: 'volume-1', label: 'Tom I', status: 'available', chapters: [] },
@@ -117,6 +133,19 @@ function readProgress(): ReaderProgress | null {
   } catch {
     return null
   }
+}
+
+function readInterestLeads(): InterestLead[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(INTEREST_KEY) ?? '[]') as InterestLead[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writeInterestLeads(leads: InterestLead[]): void {
+  localStorage.setItem(INTEREST_KEY, JSON.stringify(leads))
 }
 
 function getAvailableVolume(fixture: ReaderFixture | null): Volume | undefined {
@@ -202,6 +231,11 @@ function App() {
   const [currentLocation, setCurrentLocation] = useState<ReaderProgress | null>(() => readProgress())
   const [currentPageIndex, setCurrentPageIndex] = useState(0)
   const [tocOpen, setTocOpen] = useState(false)
+  const [interestEmail, setInterestEmail] = useState('')
+  const [interestKind, setInterestKind] = useState<InterestKind>('full_ebook')
+  const [interestStatus, setInterestStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+  const [interestLeads, setInterestLeads] = useState<InterestLead[]>(() => readInterestLeads())
+  const [moreOpen, setMoreOpen] = useState(false)
 
   const debugMode = useMemo(() => getDebugMode(), [])
   const work = fixture?.work
@@ -231,6 +265,16 @@ function App() {
   const currentPage = pages[resolvedPageIndex]
   const pageCount = Math.max(pages.length, 1)
   const volumeProgressPercent = useMemo(() => getVolumeProgressPercent(fixture, currentLocation), [currentLocation, fixture])
+
+  const jumpToLandingTarget = useCallback((targetId: string, shouldOpenMore = false) => {
+    if (shouldOpenMore) setMoreOpen(true)
+    window.setTimeout(() => {
+      const target = document.getElementById(targetId)
+      if (target && typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 0)
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -465,6 +509,28 @@ function App() {
 
   const exportOverrides = () => downloadJson('szwejk-reader-overrides.json', overrides)
 
+  const submitInterestLead = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      const email = interestEmail.trim().toLowerCase()
+      if (!email || !email.includes('@')) {
+        setInterestStatus('error')
+        return
+      }
+
+      const nextLead: InterestLead = {
+        email,
+        interest: interestKind,
+        createdAt: new Date().toISOString(),
+      }
+      const nextLeads = [...interestLeads, nextLead]
+      setInterestLeads(nextLeads)
+      writeInterestLeads(nextLeads)
+      setInterestStatus('saved')
+    },
+    [interestEmail, interestKind, interestLeads],
+  )
+
   if (view === 'reader') {
     const canGoBack = resolvedPageIndex > 0
     const canGoForward = resolvedPageIndex < pages.length - 1
@@ -483,35 +549,45 @@ function App() {
             onClick={closeReaderOverlays}
           >
             <div className="reader-page-head" onClick={(event) => event.stopPropagation()}>
-              <nav className="reader-breadcrumb" aria-label="Ścieżka czytania">
-                <button className="reader-crumb-button" type="button" onClick={() => setView('library')}>
-                  Biblioteczka
-                </button>
-                <span aria-hidden="true">&gt;</span>
-                <span>{WORK_TITLE}</span>
-                <span aria-hidden="true">&gt;</span>
-                <span>Tom I</span>
-                <span aria-hidden="true">&gt;</span>
-                <button
-                  className="reader-crumb-button reader-chapter-trigger"
-                  type="button"
-                  aria-expanded={tocOpen}
-                  aria-label={`Spis treści: ${currentChapterTitle}`}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setSelection(null)
-                    setTocOpen((open) => !open)
-                  }}
-                >
-                  {currentChapterTitle}
-                </button>
-              </nav>
-              {debugMode ? (
-                <span className="debug-pill">
-                  <Bug className="h-3.5 w-3.5" />
-                  debug
-                </span>
-              ) : null}
+              <div className="reader-intro" aria-hidden="true">
+                <p className="reader-intro-label">Demo hybrydowego czytania</p>
+                <div className="reader-intro-legend">
+                  <span>tekst polski</span>
+                  <span>wstawki czeskie</span>
+                  <span>pierwsze wystąpienia / przypisy</span>
+                </div>
+              </div>
+              <div className="reader-page-head-row">
+                <nav className="reader-breadcrumb" aria-label="Ścieżka czytania">
+                  <button className="reader-crumb-button" type="button" onClick={() => setView('library')}>
+                    Biblioteczka
+                  </button>
+                  <span aria-hidden="true">&gt;</span>
+                  <span>{WORK_TITLE}</span>
+                  <span aria-hidden="true">&gt;</span>
+                  <span>Tom I</span>
+                  <span aria-hidden="true">&gt;</span>
+                  <button
+                    className="reader-crumb-button reader-chapter-trigger"
+                    type="button"
+                    aria-expanded={tocOpen}
+                    aria-label={`Spis treści: ${currentChapterTitle}`}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setSelection(null)
+                      setTocOpen((open) => !open)
+                    }}
+                  >
+                    {currentChapterTitle}
+                  </button>
+                </nav>
+                {debugMode ? (
+                  <span className="debug-pill">
+                    <Bug className="h-3.5 w-3.5" />
+                    debug
+                  </span>
+                ) : null}
+              </div>
               {tocOpen ? (
                 <TableOfContents
                   chapters={availableChapters}
@@ -568,48 +644,223 @@ function App() {
   }
 
   return (
-    <main className="library-view text-foreground">
+    <main className="library-view text-foreground" id="top">
       <div className="library-shell">
-        <header className="library-hero">
-          <p className="library-kicker">Hybrydowe wydanie PL {'->'} CS</p>
-          <h1>{WORK_TITLE}</h1>
-          <p className="library-lede">
-            Czytaj polski tekst, który stopniowo przechodzi w czeski. Klikaj trudniejsze słowa, żeby zobaczyć równoległy fragment.
-          </p>
-          <div className="library-actions">
-            <Button asChild variant="outline">
-              <a href="#library-about">O projekcie</a>
-            </Button>
+        <nav className="landing-nav" aria-label="Nawigacja główna">
+          <a className="landing-nav-brand" href="#top" onClick={() => jumpToLandingTarget('top')}>
+            Szwejk Reader
+          </a>
+          <div className="landing-nav-links">
+            <button type="button" onClick={() => jumpToLandingTarget('library-shelf')}>
+              Tomy
+            </button>
+            <button type="button" onClick={() => jumpToLandingTarget('landing-more', true)}>
+              Więcej
+            </button>
+            <button type="button" onClick={() => jumpToLandingTarget('interest', true)}>
+              Kontakt
+            </button>
           </div>
+        </nav>
+        <header className="landing-hero">
+          <p className="landing-kicker">Hybrydowe wydanie PL {'->'} CS</p>
+          <h1>{PRODUCT_TITLE}</h1>
+          <p className="landing-tagline">{WORK_TITLE}</p>
+          <p className="landing-lede">Czytaj po polsku. Ucz się czeskiego, zanim zauważysz.</p>
+          <p className="landing-subline">Eksperymentalna hybrydowa edycja Szwejka z przypisami i słowniczkiem kontekstowym.</p>
         </header>
 
         {loadError ? <p className="reader-error">{loadError}</p> : null}
 
-        <section className="library-shelf" aria-labelledby="library-shelf-title">
-          <div className="library-shelf-head">
-            <h2 id="library-shelf-title">Tomy</h2>
-            <p>Wybierz tom z półki.</p>
+        <section className="landing-demo" id="library-shelf" aria-labelledby="landing-demo-title">
+          <div className="landing-section-head">
+            <p className="landing-section-kicker">Demo hybrydowego czytania</p>
+            <h2 id="landing-demo-title">Wybierz tom z półki</h2>
+            <p className="landing-legend">
+              <span>tekst polski</span>
+              <span>wstawki czeskie</span>
+              <span>pierwsze wystąpienia / przypisy</span>
+            </p>
           </div>
-          <div className="volume-grid">
-            {libraryVolumes.map((volume) => (
-              <VolumeTile
-                key={volume.id}
-                volume={volume}
-                coverSrc={getVolumeCoverSrc(volume.id)}
-                progressPercent={volume.id === FIXTURE_VOLUME_ID ? volumeProgressPercent : 0}
-                onOpen={openReader}
-              />
-            ))}
+          <div className="library-shelf" aria-labelledby="library-shelf-title">
+            <div className="library-shelf-head">
+              <h3 id="library-shelf-title">Tomy</h3>
+              <p>Tom I jest dostępny od razu. Pozostałe tomy są jeszcze w przygotowaniu.</p>
+            </div>
+            <div className="volume-grid">
+              {libraryVolumes.map((volume) => (
+                <VolumeTile
+                  key={volume.id}
+                  volume={volume}
+                  coverSrc={getVolumeCoverSrc(volume.id)}
+                  progressPercent={volume.id === FIXTURE_VOLUME_ID ? volumeProgressPercent : 0}
+                  onOpen={openReader}
+                />
+              ))}
+            </div>
           </div>
         </section>
 
-        <section className="library-about" id="library-about" aria-labelledby="library-about-title">
-          <p className="library-about-kicker">O projekcie</p>
-          <h2 id="library-about-title">Powieść w dwóch językach</h2>
-          <p>
-            Publiczny czytnik pokazuje polski tekst z równoległymi czeskimi podstawieniami. Tom I można czytać od razu, a pozostałe
-            tomy są jeszcze w przygotowaniu.
-          </p>
+        <section className="landing-more" id="landing-more">
+          <button
+            type="button"
+            className="landing-more-trigger inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-expanded={moreOpen}
+            aria-controls="landing-more-content"
+            onClick={() => setMoreOpen((open) => !open)}
+          >
+            Dowiedz się więcej
+          </button>
+          {moreOpen ? (
+            <div className="landing-more-content" id="landing-more-content">
+          <section className="landing-grid landing-how" aria-labelledby="landing-how-title">
+            <div className="landing-section-head">
+              <p className="landing-section-kicker">Jak to działa?</p>
+              <h2 id="landing-how-title">Trzy kroki zamiast kursu i fiszek</h2>
+            </div>
+            <ol className="landing-steps">
+              <li>
+                <span>1</span>
+                <div>
+                  <h3>Startujesz od polskiego tekstu.</h3>
+                  <p>Masz klasykę w znanym brzmieniu i nie tracisz rytmu lektury.</p>
+                </div>
+              </li>
+              <li>
+                <span>2</span>
+                <div>
+                  <h3>System stopniowo wprowadza czeskie słowa i frazy.</h3>
+                  <p>Zmiana jest płynna, więc nowy język osadza się w pamięci naturalnie.</p>
+                </div>
+              </li>
+              <li>
+                <span>3</span>
+                <div>
+                  <h3>Przypisy i słowniczek pomagają z kontekstu.</h3>
+                  <p>Nie zgadujesz na ślepo. Klikasz trudniejsze fragmenty, gdy chcesz więcej pewności.</p>
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <section className="landing-grid landing-reasons" aria-labelledby="landing-reasons-title">
+            <div className="landing-section-head">
+              <p className="landing-section-kicker">Dlaczego to może być ciekawe?</p>
+              <h2 id="landing-reasons-title">Literatura jako interfejs do nauki</h2>
+            </div>
+            <div className="reason-grid">
+              <article className="reason-card">
+                <h3>Nauka języka przez literaturę, bez fiszek.</h3>
+                <p>Tekst robi za nośnik pamięci. Słowo pojawia się tam, gdzie naprawdę coś znaczy.</p>
+              </article>
+              <article className="reason-card">
+                <h3>Szczególnie dobre dla języków bliskich.</h3>
+                <p>Polski i czeski mają wspólną historyczną glebę. To format skrojony pod takie pary.</p>
+              </article>
+              <article className="reason-card">
+                <h3>Klasyka w nowym formacie.</h3>
+                <p>Znana powieść staje się czytelnym demonstratorem hybrydowego wydania dwujęzycznego.</p>
+              </article>
+              <article className="reason-card">
+                <h3>Od e-booka do adaptive audiobooka.</h3>
+                <p>Ten sam pipeline może prowadzić dalej do wersji audio, np. z narracją generowaną głosowo.</p>
+              </article>
+            </div>
+          </section>
+
+          <section className="interest-panel" id="interest" aria-labelledby="interest-title">
+            <div className="landing-section-head">
+              <p className="landing-section-kicker">Zostaw kontakt</p>
+              <h2 id="interest-title">Chcę pełną wersję albo audiobook</h2>
+              <p>Podaj adres e-mail i wybierz, co Cię interesuje. Na razie zapis trafia lokalnie do przeglądarki.</p>
+            </div>
+            <form className="interest-form" onSubmit={submitInterestLead}>
+              <label className="interest-field">
+                <span>Adres e-mail</span>
+                <input
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  placeholder="name@example.com"
+                  value={interestEmail}
+                  onChange={(event) => {
+                    setInterestEmail(event.target.value)
+                    if (interestStatus !== 'idle') setInterestStatus('idle')
+                  }}
+                />
+              </label>
+              <label className="interest-field">
+                <span>Interesuje mnie</span>
+                <select
+                  name="interest"
+                  value={interestKind}
+                  onChange={(event) => {
+                    setInterestKind(event.target.value as InterestKind)
+                    if (interestStatus !== 'idle') setInterestStatus('idle')
+                  }}
+                >
+                  {INTEREST_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button type="submit">Zapisz zainteresowanie</Button>
+            </form>
+            <p className={cn('interest-message', interestStatus === 'error' && 'interest-message-error', interestStatus === 'saved' && 'interest-message-success')}>
+              {interestStatus === 'saved'
+                ? 'Dzięki! To tymczasowe demo — na razie zapisz też link lub odezwij się bezpośrednio.'
+                : interestStatus === 'error'
+                  ? 'Podaj poprawny adres e-mail.'
+                  : 'Możesz zaznaczyć też współpracę wydawniczą albo technologię / pipeline.'}
+            </p>
+          </section>
+
+          <section className="partner-panel" aria-labelledby="partner-title">
+            <div className="landing-section-head">
+              <p className="landing-section-kicker">Szukamy partnerów</p>
+              <h2 id="partner-title">Projekt można rozwinąć dalej</h2>
+            </div>
+            <p>
+              Projekt może zostać rozwinięty jako e-book, audiobook albo narzędzie do tworzenia hybrydowych wydań dwujęzycznych.
+              Interesują nas rozmowy z wydawcami, instytucjami kultury, nauczycielami języków i firmami audio/AI.
+            </p>
+          </section>
+
+          <section className="faq-panel" aria-labelledby="faq-title">
+            <div className="landing-section-head">
+              <p className="landing-section-kicker">FAQ</p>
+              <h2 id="faq-title">Kilka prostych odpowiedzi</h2>
+            </div>
+            <div className="faq-list">
+              <details>
+                <summary>Czy to jest tłumaczenie?</summary>
+                <p>Nie klasyczne tłumaczenie, tylko hybrydowa edycja oparta na alignmencie PL↔CZ.</p>
+              </details>
+              <details>
+                <summary>Dla kogo to jest?</summary>
+                <p>Dla osób znających polski, które chcą łagodnie wejść w czeski.</p>
+              </details>
+              <details>
+                <summary>Czy będzie audiobook?</summary>
+                <p>To jeden z planowanych kierunków.</p>
+              </details>
+              <details>
+                <summary>Czy da się zrobić inne języki?</summary>
+                <p>Tak, docelowo format może działać także dla innych bliskich par językowych.</p>
+              </details>
+            </div>
+          </section>
+
+          <footer className="landing-footer">
+            <p className="landing-legal">
+              Demo eksperymentalne. Teksty źródłowe pochodzą z domeny publicznej / otwartych źródeł, ale przed komercyjną dystrybucją
+              pełnego wydania wymagane jest dodatkowe sprawdzenie praw dla konkretnych rynków.
+            </p>
+          </footer>
+            </div>
+          ) : null}
         </section>
       </div>
     </main>

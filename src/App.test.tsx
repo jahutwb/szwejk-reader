@@ -16,6 +16,10 @@ const workTitle = 'Przygody dobrego wojaka Szwejka podczas wojny światowej'
 const fixtureResponse = () => new Response(JSON.stringify(readerFixture), { status: 200, headers: { 'content-type': 'application/json' } })
 const pageMapResponse = () => new Response(JSON.stringify(latexPageMap), { status: 200, headers: { 'content-type': 'application/json' } })
 
+function getContactNavButton(): HTMLElement {
+  return screen.getByRole('button', { name: /kontakt/i })
+}
+
 function getVolumeOneReaderButton(): HTMLElement {
   return screen.getByRole('button', { name: /tom i, szwejk na tyłach, czytaj za darmo, \d+% przeczytane/i })
 }
@@ -64,14 +68,19 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: workTitle })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /o projekcie/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /szwejk reader/i })).toBeInTheDocument()
+    expect(screen.getByText(/czytaj po polsku\. ucz się czeskiego, zanim zauważysz\./i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tomy/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^więcej$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /kontakt/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /dowiedz się więcej/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /tom i, szwejk na tyłach, czytaj za darmo, 0% przeczytane/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /tom ii, szwejk na froncie, w przygotowaniu/i })).toBeDisabled()
 
     await user.click(getVolumeOneReaderButton())
 
     expect(await screen.findByTestId('reader-screen')).toBeInTheDocument()
+    expect(screen.getByText(/demo hybrydowego czytania/i)).toBeInTheDocument()
     expect(screen.getByTestId('reader-page-frame')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /następna strona/i })).toBeInTheDocument()
     expect(screen.getByText(/biblioteczka/i)).toBeInTheDocument()
@@ -108,6 +117,23 @@ describe('App', () => {
       },
       { timeout: 5000 },
     )
+  })
+
+  it('stores interest leads locally from the landing form', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(getContactNavButton())
+
+    const emailInput = screen.getByRole('textbox', { name: /adres e-mail/i })
+    await user.type(emailInput, 'reader@example.com')
+    await user.selectOptions(screen.getByRole('combobox', { name: /interesuje mnie/i }), 'audiobook')
+    await user.click(screen.getByRole('button', { name: /zapisz zainteresowanie/i }))
+
+    expect(screen.getByText(/dzięki! to tymczasowe demo/i)).toBeInTheDocument()
+
+    const stored = JSON.parse(localStorage.getItem('szwejk-reader.interest') ?? '[]') as Array<{ email: string; interest: string }>
+    expect(stored.at(-1)).toMatchObject({ email: 'reader@example.com', interest: 'audiobook' })
   })
 
   it('uses a single-line breadcrumb with a clickable table of contents', async () => {
