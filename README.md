@@ -1,5 +1,13 @@
 # szwejk-reader
 
+## Portfolio overview
+
+A React + TypeScript reader application for a Polish-Czech hybrid literary edition. The app renders structured alignment output, supports token-level interaction and annotations, preserves stable IDs across the reading pipeline, and includes automated tests, linting and type checking.
+
+**Core stack:** React, TypeScript, Vite, Vitest, Testing Library, ESLint.
+
+---
+
 Webowa aplikacja czytelnicza dla hybrydowego wydania PL -> CS "Dobrego wojaka Szwejka".
 
 ## Status
