@@ -1,5 +1,7 @@
 # szwejk-reader
 
+> **Status: historyczne MVP czytnika.** Ten kod nie jest aktualnym wydaniem Przeslowa. Dzialajaca, nowsza aplikacja jest dostepna na [przeslowo.pl](https://przeslowo.pl); jej repozytorium jest prywatne. Opis ponizej dokumentuje stan dawnego MVP.
+
 ## Portfolio overview
 
 A React + TypeScript reader application for a Polish-Czech hybrid literary edition. The app renders structured alignment output, supports token-level interaction and annotations, preserves stable IDs across the reading pipeline, and includes automated tests, linting and type checking.
